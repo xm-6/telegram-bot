@@ -39,7 +39,7 @@ def chat_with_gpt(user_id, prompt):
     try:
         # 调用 OpenAI API
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # 使用 gpt-4 模型
+            model="gpt-4-turbo",  # 使用 gpt-4-turbo 模型
             messages=user_sessions[user_id]["messages"],
             temperature=0.7
         )
