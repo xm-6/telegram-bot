@@ -19,7 +19,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # 与 ChatGPT 通信的函数
 def chat_with_gpt(user_id, prompt):
-    # 当前时间
     current_time = time.time()
 
     # 初始化用户上下文
@@ -50,7 +49,7 @@ def chat_with_gpt(user_id, prompt):
 
         # 记录日志
         logging.info(f"User {user_id}: {prompt}")
-        logging.info(f"GPT-4-Turbo Response: {reply}")
+        logging.info(f"GPT-4-0613 Response: {reply}")
 
         return reply
     except openai.error.OpenAIError as e:
@@ -74,14 +73,14 @@ def cleanup_sessions(inactive_duration=3600):
 def clear_session(update, context):
     user_id = update.message.chat_id
     if user_id in user_sessions:
-        del user_sessions[user_id]  # 删除该用户的会话上下文
+        del user_sessions[user_id]
         update.message.reply_text("您的对话上下文已清除。")
     else:
         update.message.reply_text("当前没有对话上下文需要清除。")
 
 # 处理 /start 命令
 def start(update, context):
-    update.message.reply_text("你好！我是一个 ChatGPT 4 Turbo 驱动的机器人，我会记住你的上下文对话。如果需要清除上下文，请输入 /clear。")
+    update.message.reply_text("你好！我是一个 ChatGPT 4 驱动的机器人，我会记住你的上下文对话。如果需要清除上下文，请输入 /clear。")
 
 # 处理用户的消息
 def handle_message(update, context):
