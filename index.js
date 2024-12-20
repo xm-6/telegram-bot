@@ -20,25 +20,6 @@ console.log('Bot Token:', process.env.BOT_TOKEN);
 let accounts = {}; // 存储每个聊天的账单信息
 let userTimeZones = {}; // 存储每个用户的时区设置，默认 'Asia/Shanghai'
 let userLanguages = {}; // 存储每个用户的语言设置，默认 'zh-CN'
-
-const messages = {
-    'zh-CN': {
-        help: `指令列表：
-1. +100 -- 记录入款 100 CNY
-...
-14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`,
-        languageChanged: "语言已切换为：中文。",
-        invalidLanguage: "无效的语言代码，请输入 zh-CN 或 en-US。",
-    },
-    'en-US': {
-        help: `Command list:
-1. +100 -- Record deposit 100 CNY
-...
-14. Switch language<language code> -- Switch bot language (e.g., zh-CN or en-US)`,
-        languageChanged: "Language switched to: English.",
-        invalidLanguage: "Invalid language code. Please enter zh-CN or en-US.",
-    }
-};
 let exchangeRate = 6.8; // 汇率
 let fees = 0; // 手续费率
 let operators = []; // 操作员列表
@@ -100,6 +81,16 @@ const validateTimeZone = (tz) => {
     }
 };
 
+// 检查时区是否有效
+const validateTimeZone = (tz) => {
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+
 // 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
@@ -124,6 +115,19 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
 
     ctx.reply(`时区已设置为：${timeZone}\n当前时间：${currentTime}`);
 });
+
+const messages = {
+    'zh-CN': {
+        help: '指令列表：\n1. +100 -- 记录入款 100 CNY\n2. +100u -- 记录入款 100 USDT\n...',
+        languageChanged: "语言已切换为：中文。",
+        invalidLanguage: "无效的语言代码，请输入 zh-CN 或 en-US。",
+    },
+    'en-US': {
+        help: 'Command list:\n1. +100 -- Record deposit 100 CNY\n2. +100u -- Record deposit 100 USDT\n...',
+        languageChanged: "Language switched to: English.",
+        invalidLanguage: "Invalid language code. Please enter zh-CN or en-US.",
+    }
+};
 
 // 切换语言
 bot.hears(/^切换语言(\S+)$/i, (ctx) => {
