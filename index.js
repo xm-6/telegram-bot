@@ -1,6 +1,8 @@
 const { Telegraf } = require('telegraf');
 require('dotenv').config();
 
+const { json } = require('micro'); // 确保 micro 已安装
+
 // Webhook 处理逻辑
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
