@@ -41,20 +41,40 @@ bot.command('help', (ctx) => {
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
-4. 账单 -- 查看当前账单
+4. 账单 -- 查看当前账单，包含每笔交易时间
 5. 汇总 -- 查看账单汇总
 6. 设置汇率6.8 -- 设置汇率为 6.8
 7. 设置费率0.5 -- 设置费率为 0.5
 8. 删除当前数据 -- 清空当前账单
 9. 添加操作员 -- 回复消息以添加操作员
 10. 删除操作员 -- 回复消息以删除操作员
-11. 全局广播<消息> -- 广播消息至所有群`);
+11. 全局广播<消息> -- 广播消息至所有群
+12. 计算<表达式> -- 计算数学表达式（如：5+6*6-1/(6+3)）`);
 });
 
 // Ping 测试
 bot.hears('ping', (ctx) => {
     console.log('Ping command triggered');
     ctx.reply('pong');
+});
+
+const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
+
+bot.hears(/计算(.+)/i, (ctx) => {
+    try {
+        const expression = ctx.match[1].trim();
+        
+        // 验证表达式是否合法
+        if (!mathExpressionRegex.test(expression)) {
+            return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
+        }
+
+        // 计算表达式
+        const result = eval(expression); // 解析和计算数学表达式
+        ctx.reply(`计算结果：${result}`);
+    } catch (error) {
+        ctx.reply('计算失败，请检查输入的表达式格式是否正确。例如："5+6*6-1/(6+3)"。');
+    }
 });
 
 // **入款功能**
@@ -69,11 +89,11 @@ bot.hears(/^\+\d+(u?)$/i, (ctx) => {
             accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
         }
 
-        accounts[id].transactions.push({ type: 'deposit', amount, currency });
+        accounts[id].transactions.push({ type: 'deposit', amount, currency, time: new Date().toLocaleString() });
         accounts[id].totalDeposit += amount;
 
         console.log('Updated accounts:', accounts);
-        ctx.reply(`入款已记录：${amount} ${currency}\n当前总入款：${accounts[id].totalDeposit} ${currency}`);
+        ctx.reply(`入款已记录：${amount} ${currency}\n时间：${new Date().toLocaleString()}\n当前总入款：${accounts[id].totalDeposit} ${currency}`);
     } catch (error) {
         console.error('Error in deposit command:', error);
         ctx.reply('处理入款时出错，请稍后再试。');
@@ -92,10 +112,10 @@ bot.hears(/^下拨\d+(u?)$/i, (ctx) => {
             accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
         }
 
-        accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
+        accounts[id].transactions.push({ type: 'withdrawal', amount, currency, time: new Date().toLocaleString() });
         accounts[id].totalWithdrawal += amount;
 
-        ctx.reply(`出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
+        ctx.reply(`出款已记录：${amount} ${currency}\n时间：${new Date().toLocaleString()}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
     } catch (error) {
         console.error('Error in withdrawal command:', error);
         ctx.reply('处理出款时出错，请稍后再试。');
@@ -114,8 +134,8 @@ bot.hears(/^账单$/i, (ctx) => {
     const { transactions, totalDeposit, totalWithdrawal } = accounts[id];
     let details = `账单明细：\n`;
     transactions.forEach((entry, index) => {
-        details += `${index + 1}. ${entry.type === 'deposit' ? '入款' : '出款'} ${entry.amount} ${entry.currency}\n`;
-    });
+    details += `${index + 1}. ${entry.type === 'deposit' ? '入款' : '出款'} ${entry.amount} ${entry.currency} 时间：${entry.time}\n`;
+});
 
     details += `\n-------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净回款：${totalDeposit - totalWithdrawal} CNY\n`;
 
