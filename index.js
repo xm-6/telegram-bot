@@ -71,16 +71,6 @@ bot.hears('ping', (ctx) => {
     ctx.reply('pong');
 });
 
-// 改变函数名以避免冲突
-const validateTimeZone = (tz) => {
-    try {
-        new Intl.DateTimeFormat('en-US', { timeZone: tz });
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
 // 检查时区是否有效
 const validateTimeZone = (tz) => {
     try {
