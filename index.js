@@ -106,19 +106,12 @@ bot.hears(/^\s*下拨\s*(\d+)\s*(u?)\s*$/i, (ctx) => {
     accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
   }
 
-  accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
-  accounts[id].totalWithdrawal += amount;
-
-  ctx.reply(`出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
-});
-
-
   // 记录出款交易
   accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
   accounts[id].totalWithdrawal += amount;
 
   // 返回出款记录及总计
-  ctx.reply(`\n出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
+  ctx.reply(`出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
 });
 
 // 查看账单
@@ -140,7 +133,6 @@ bot.command('账单', (ctx) => {
 
   ctx.reply(details);
 });
-
 
 // 汇总账单
 bot.command('汇总', (ctx) => {
