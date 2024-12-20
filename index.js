@@ -154,8 +154,6 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
 });
 
 
-const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
-
 // 计算数学表达式
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 bot.hears(/计算(.+)/i, (ctx) => {
