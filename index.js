@@ -2,6 +2,7 @@ const { Telegraf } = require('telegraf');
 require('dotenv').config();
 
 const { json } = require('micro'); // 确保 micro 已安装
+console.log('Bot Token:', process.env.BOT_TOKEN);
 
 // Webhook 处理逻辑
 module.exports = async (req, res) => {
@@ -200,15 +201,4 @@ async function callTelegramApiWithRetries(method, data, retries = 3, timeout = 1
 }
 
 // 测试命令
-bot.command('测试', async (ctx) => {
-  try {
-    const response = await callTelegramApiWithRetries('sendMessage', {
-      chat_id: ctx.chat.id,
-      text: '测试消息',
-    });
-    console.log('Message sent:', response);
-  } catch (error) {
-    console.error('Failed to send message:', error.message);
-    ctx.reply('发送失败，请稍后重试。');
-  }
-});
+bot.hears('ping', (ctx) => ctx.reply('pong'));
