@@ -11,6 +11,10 @@ console.log('Bot Token:', process.env.BOT_TOKEN);
 // 示例监听器，用于测试 Bot 是否正常运行
 bot.hears('ping', (ctx) => ctx.reply('pong'));
 bot.hears('test', (ctx) => ctx.reply('测试指令生效'));
+bot.hears('+100', (ctx) => {
+    console.log('Deposit command triggered');
+    ctx.reply('入款记录触发成功');
+});
 
 // Webhook 入口
 module.exports = async (req, res) => {
