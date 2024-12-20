@@ -5,10 +5,40 @@ require('dotenv').config();
 
 // 初始化 Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
+// 获取指定时区的当前时间
+const getCurrentTime = (chatId) => {
+    const timeZone = userTimeZones[chatId] || 'Asia/Shanghai'; // 默认为上海时区
+    return new Intl.DateTimeFormat('zh-CN', {
+        timeZone: timeZone,
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    }).format(new Date());
+};
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
 // 数据存储（内存模拟）
 let accounts = {}; // 存储每个聊天的账单信息
+let userTimeZones = {}; // 存储每个用户的时区设置，默认 'Asia/Shanghai'
+let userLanguages = {}; // 存储每个用户的语言设置，默认 'zh-CN'
+
+const messages = {
+    'zh-CN': {
+        help: `指令列表：
+1. +100 -- 记录入款 100 CNY
+...
+14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`,
+        languageChanged: "语言已切换为：中文。",
+        invalidLanguage: "无效的语言代码，请输入 zh-CN 或 en-US。",
+    },
+    'en-US': {
+        help: `Command list:
+1. +100 -- Record deposit 100 CNY
+...
+14. Switch language<language code> -- Switch bot language (e.g., zh-CN or en-US)`,
+        languageChanged: "Language switched to: English.",
+        invalidLanguage: "Invalid language code. Please enter zh-CN or en-US.",
+    }
+};
 let exchangeRate = 6.8; // 汇率
 let fees = 0; // 手续费率
 let operators = []; // 操作员列表
@@ -37,7 +67,10 @@ bot.catch((err, ctx) => {
 
 // **基础指令**
 bot.command('help', (ctx) => {
-    ctx.reply(`指令列表：
+    const chatId = ctx.chat.id;
+    const language = userLanguages[chatId] || 'zh-CN'; // 默认中文
+    ctx.reply(messages[language].help);
+});
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
@@ -56,6 +89,35 @@ bot.command('help', (ctx) => {
 bot.hears('ping', (ctx) => {
     console.log('Ping command triggered');
     ctx.reply('pong');
+});
+
+// 设置时区
+bot.hears(/^设置时区 (.+)$/i, (ctx) => {
+    const chatId = ctx.chat.id;
+    const timeZone = ctx.match[1].trim();
+
+    if (!isValidTimeZone(timeZone)) {
+        return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
+    }
+
+    userTimeZones[chatId] = timeZone;
+    ctx.reply(`时区已设置为：${timeZone}\n当前时间：${getCurrentTime(chatId)}`);
+});
+
+// 切换语言
+bot.hears(/^切换语言 (.+)$/i, (ctx) => {
+    const chatId = ctx.chat.id;
+    const languageCode = ctx.match[1].trim();
+
+    // 转为标准格式（首字母大写，防止用户输入小写）
+    const standardizedLanguage = languageCode.charAt(0).toLowerCase() + languageCode.slice(1);
+
+    if (!messages[standardizedLanguage]) {
+        return ctx.reply(messages[userLanguages[chatId] || 'zh-CN'].invalidLanguage);
+    }
+
+    userLanguages[chatId] = standardizedLanguage;
+    ctx.reply(messages[standardizedLanguage].languageChanged);
 });
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
@@ -89,7 +151,7 @@ bot.hears(/^\+\d+(u?)$/i, (ctx) => {
             accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
         }
 
-        accounts[id].transactions.push({ type: 'deposit', amount, currency, time: new Date().toLocaleString() });
+        accounts[id].transactions.push({ type: 'deposit', amount, currency, time: getCurrentTime(id) });
         accounts[id].totalDeposit += amount;
 
         console.log('Updated accounts:', accounts);
@@ -112,7 +174,7 @@ bot.hears(/^下拨\d+(u?)$/i, (ctx) => {
             accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
         }
 
-        accounts[id].transactions.push({ type: 'withdrawal', amount, currency, time: new Date().toLocaleString() });
+        accounts[id].transactions.push({ type: 'withdrawal', amount, currency, time: getCurrentTime(id) });
         accounts[id].totalWithdrawal += amount;
 
         ctx.reply(`出款已记录：${amount} ${currency}\n时间：${new Date().toLocaleString()}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
