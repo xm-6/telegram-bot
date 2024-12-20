@@ -67,10 +67,7 @@ bot.catch((err, ctx) => {
 
 // **基础指令**
 bot.command('help', (ctx) => {
-    const chatId = ctx.chat.id;
-    const language = userLanguages[chatId] || 'zh-CN'; // 默认中文
-    ctx.reply(messages[language].help);
-});
+    ctx.reply(`指令列表：
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
@@ -82,7 +79,9 @@ bot.command('help', (ctx) => {
 9. 添加操作员 -- 回复消息以添加操作员
 10. 删除操作员 -- 回复消息以删除操作员
 11. 全局广播<消息> -- 广播消息至所有群
-12. 计算<表达式> -- 计算数学表达式（如：5+6*6-1/(6+3)）`);
+12. 计算<表达式> -- 计算数学表达式（如：5+6*6-1/(6+3)）
+13. 设置时区<时区名称> -- 设置当前记录使用的时区（如：Asia/Shanghai）
+14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`);
 });
 
 // Ping 测试
