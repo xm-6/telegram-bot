@@ -96,19 +96,22 @@ bot.hears(/\+(\d+)\s*(u?)/i, (ctx) => {
 });
 
 // 出款功能
-bot.hears(/下拨(\d+)\s*(u?)/i, (ctx) => {
+bot.hears(/^\s*下拨\s*(\d+)\s*(u?)\s*$/i, (ctx) => {
+  console.log('触发出款逻辑:', ctx.message.text);
   const amount = parseFloat(ctx.match[1]);
   const currency = ctx.match[2]?.toLowerCase() === 'u' ? 'USDT' : 'CNY';
   const id = ctx.chat.id;
 
   if (!accounts[id]) {
-    // 初始化账单数据
-    accounts[id] = {
-      transactions: [],
-      totalDeposit: 0,
-      totalWithdrawal: 0,
-    };
+    accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
   }
+
+  accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
+  accounts[id].totalWithdrawal += amount;
+
+  ctx.reply(`出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
+});
+
 
   // 记录出款交易
   accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
@@ -121,6 +124,7 @@ bot.hears(/下拨(\d+)\s*(u?)/i, (ctx) => {
 // 查看账单
 bot.command('账单', (ctx) => {
   const id = ctx.chat.id;
+  console.log(`触发 /账单，chat.id=${id}, 账单数据:`, accounts[id]);
 
   if (!accounts[id] || accounts[id].transactions.length === 0) {
     return ctx.reply('当前没有账单记录。');
@@ -137,9 +141,11 @@ bot.command('账单', (ctx) => {
   ctx.reply(details);
 });
 
+
 // 汇总账单
 bot.command('汇总', (ctx) => {
   const id = ctx.chat.id;
+  console.log(`触发 /汇总，chat.id=${id}, 数据:`, accounts[id]);
 
   if (!accounts[id] || accounts[id].transactions.length === 0) {
     return ctx.reply('当前没有账单记录。');
