@@ -109,8 +109,14 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
     }
 
+    // 更新时区设置
     userTimeZones[chatId] = timeZone;
-    ctx.reply(`时区已设置为：${timeZone}\n当前时间：${getCurrentTime(chatId)}`);
+
+    // 获取当前时间并显示
+    const currentTime = getCurrentTime(chatId);
+    console.log(`Time zone for user ${chatId} set to ${timeZone}, current time: ${currentTime}`);
+
+    ctx.reply(`时区已设置为：${timeZone}\n当前时间：${currentTime}`);
 });
 
 // 切换语言
@@ -122,20 +128,27 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
         return ctx.reply('无效的语言代码，请输入 zh-CN 或 en-US。');
     }
 
+    // 更新语言设置
     userLanguages[chatId] = language;
-    ctx.reply(messages[language].languageChanged);
+    console.log(`Language changed for user ${chatId} to ${language}`);
+    
+    ctx.reply(messages[language].languageChanged); // 发送语言切换反馈
 });
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
 bot.hears(/计算(.+)/i, (ctx) => {
     try {
-        const expression = ctx.match[1].trim();
+        const expression = ctx.match[1].trim();  // 获取用户输入的表达式
+        console.log('计算指令输入:', expression);
+
+        // 检查是否是有效的数学表达式
         if (!mathExpressionRegex.test(expression)) {
             return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
         }
 
-        const result = eval(expression);
+        // 使用 Function 构造函数计算表达式
+        const result = new Function('return ' + expression)();  // 执行计算
         ctx.reply(`计算结果：${result}`);
     } catch (error) {
         console.error('计算错误:', error);
