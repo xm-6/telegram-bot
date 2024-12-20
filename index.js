@@ -91,11 +91,20 @@ bot.hears('ping', (ctx) => {
 });
 
 // 设置时区
+const isValidTimeZone = (tz) => {
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     console.log('设置时区指令触发:', ctx.message.text);
     const chatId = ctx.chat.id;
     const timeZone = ctx.match[1].trim();
-    console.log('用户输入时区:', timeZone);
+    console.log('输入的时区:', timeZone);
 
     if (!isValidTimeZone(timeZone)) {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
@@ -106,28 +115,15 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
 });
 
 // 切换语言
-bot.hears(/^切换语言 (.+)$/i, (ctx) => {
-    console.log('切换语言指令触发:', ctx.message.text);
+bot.command('help', (ctx) => {
     const chatId = ctx.chat.id;
-    const languageCode = ctx.match[1].trim();
-    console.log('用户输入语言代码:', languageCode);
-
-    const standardizedLanguage = languageCode.split('-')
-        .map((part, index) => index === 0 ? part.toLowerCase() : part.toUpperCase())
-        .join('-');
-
-    if (!messages[standardizedLanguage]) {
-        return ctx.reply(messages[userLanguages[chatId] || 'zh-CN'].invalidLanguage);
-    }
-
-    userLanguages[chatId] = standardizedLanguage;
-    ctx.reply(messages[standardizedLanguage].languageChanged);
+    const language = userLanguages[chatId] || 'zh-CN'; // 默认中文
+    ctx.reply(messages[language].help);
 });
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
 bot.hears(/计算(.+)/i, (ctx) => {
-    console.log('计算指令触发:', ctx.message.text);
     try {
         const expression = ctx.match[1].trim();
         console.log('计算指令输入:', expression);
