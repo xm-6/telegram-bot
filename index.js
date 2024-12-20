@@ -32,8 +32,8 @@ bot.help((ctx) => {
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
-4. 账单 -- 查看当前账单
-5. 汇总 -- 查看账单汇总
+4. /账单 -- 查看当前账单
+5. /汇总 -- 查看账单汇总
 6. 设置汇率6.8 -- 设置汇率为 6.8
 7. 设置费率0.5 -- 设置费率为 0.5
 8. 删除当前数据 -- 清空当前账单
@@ -41,9 +41,29 @@ bot.help((ctx) => {
 10. 删除操作员 -- 回复消息以删除操作员
 11. 全局广播<消息> -- 广播消息至所有群
   `;
+  console.log('触发 /help');
   ctx.reply(helpMessage);
 });
 
+bot.hears(/^\s*\+(\d+)\s*(u?)\s*$/i, (ctx) => {
+  console.log('触发入款逻辑:', ctx.message.text);
+  const amount = parseFloat(ctx.match[1]);
+  const currency = ctx.match[2]?.toLowerCase() === 'u' ? 'USDT' : 'CNY';
+  const id = ctx.chat.id;
+
+  if (!accounts[id]) {
+    accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
+  }
+
+  accounts[id].transactions.push({ type: 'deposit', amount, currency });
+  accounts[id].totalDeposit += amount;
+
+  ctx.reply(`入款已记录：${amount} ${currency}\n当前总入款：${accounts[id].totalDeposit} ${currency}`);
+});
+
+bot.on('text', (ctx) => {
+  console.log('收到消息:', ctx.message.text);
+});
 
 // 调试日志
 bot.on('message', (ctx) => {
