@@ -19,7 +19,7 @@ bot.help((ctx) => {
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
-      await bot.handleUpdate(req.body); // 处理 Telegram Webhook 请求
+      await bot.handleUpdate(req.body); // 使用 Webhook 处理更新
     } catch (error) {
       console.error('Error handling update:', error);
     }
