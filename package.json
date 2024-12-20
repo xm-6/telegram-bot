@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "telegraf": "^4.12.2",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "node-fetch": "^2.6.7"
   }
 }
