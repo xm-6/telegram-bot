@@ -92,6 +92,7 @@ bot.hears('ping', (ctx) => {
 
 // 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
+    console.log('设置时区指令触发:', ctx.message.text);
     const chatId = ctx.chat.id;
     const timeZone = ctx.match[1].trim();
     console.log('用户输入时区:', timeZone);
@@ -106,6 +107,7 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
 
 // 切换语言
 bot.hears(/^切换语言 (.+)$/i, (ctx) => {
+    console.log('切换语言指令触发:', ctx.message.text);
     const chatId = ctx.chat.id;
     const languageCode = ctx.match[1].trim();
     console.log('用户输入语言代码:', languageCode);
@@ -125,6 +127,7 @@ bot.hears(/^切换语言 (.+)$/i, (ctx) => {
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
 bot.hears(/计算(.+)/i, (ctx) => {
+    console.log('计算指令触发:', ctx.message.text);
     try {
         const expression = ctx.match[1].trim();
         console.log('计算指令输入:', expression);
