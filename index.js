@@ -1,6 +1,10 @@
+// 引入依赖
 const { Telegraf } = require('telegraf');
 const { json } = require('micro'); // 确保 micro 已安装
 require('dotenv').config();
+
+// 初始化 Bot
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
@@ -19,9 +23,6 @@ module.exports = async (req, res) => {
   }
   res.status(200).send('OK'); // 确保 HTTP 200 响应
 };
-
-// 初始化 Bot
-const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // 数据存储（内存模拟）
 let accounts = {};
