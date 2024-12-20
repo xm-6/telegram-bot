@@ -117,7 +117,7 @@ bot.hears(/^\s*下拨\s*(\d+)\s*(u?)\s*$/i, (ctx) => {
 // 查看账单
 bot.command('账单', (ctx) => {
   const id = ctx.chat.id;
-  console.log(`触发 /账单，chat.id=${id}, 账单数据:`, accounts[id]);
+  console.log(`触发 /账单，聊天 ID=${id}`);
 
   if (!accounts[id] || accounts[id].transactions.length === 0) {
     return ctx.reply('当前没有账单记录。');
@@ -137,7 +137,7 @@ bot.command('账单', (ctx) => {
 // 汇总账单
 bot.command('汇总', (ctx) => {
   const id = ctx.chat.id;
-  console.log(`触发 /汇总，chat.id=${id}, 数据:`, accounts[id]);
+  console.log(`触发 /汇总，聊天 ID=${id}`);
 
   if (!accounts[id] || accounts[id].transactions.length === 0) {
     return ctx.reply('当前没有账单记录。');
@@ -150,6 +150,7 @@ bot.command('汇总', (ctx) => {
 // 删除当前数据
 bot.command('删除当前数据', (ctx) => {
   const id = ctx.chat.id;
+  console.log(`触发删除当前数据，聊天 ID=${id}`);
   accounts[id] = {
     transactions: [],
     totalDeposit: 0,
@@ -193,16 +194,21 @@ bot.hears(/^全局广播(.+)$/, (ctx) => {
 bot.command('添加操作员', (ctx) => {
   const replyTo = ctx.message.reply_to_message;
 
-  if (!replyTo) return ctx.reply('请回复用户的消息以添加操作员。');
+  if (!replyTo) {
+    console.log('添加操作员失败：未回复任何消息');
+    return ctx.reply('请回复用户的消息以添加操作员。');
+  }
 
   const userId = replyTo.from.id;
   if (!operators.includes(userId)) {
     operators.push(userId);
+    console.log(`添加操作员成功：用户 ID=${userId}`);
     ctx.reply(`已添加操作员：${userId}`);
   } else {
     ctx.reply('该用户已是操作员。');
   }
 });
+
 
 // 删除操作员
 bot.command('删除操作员', (ctx) => {
