@@ -137,12 +137,11 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
 
     // 确认语言代码是否合法
     if (!['zh-CN', 'en-US'].includes(language)) {
-        return ctx.reply(messages[language]?.invalidLanguage || messages['zh-CN'].invalidLanguage);
+        return ctx.reply(messages['zh-CN'].invalidLanguage);
     }
 
     // 更新用户语言设置
     userLanguages[chatId] = language;
-
     console.log(`语言已切换为：${language}`);
 
     // 根据语言反馈切换消息
@@ -152,7 +151,6 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
         ctx.reply(messages['en-US'].languageChanged);
     }
 });
-
 
 // 计算数学表达式
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
