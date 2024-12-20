@@ -72,7 +72,7 @@ bot.hears('ping', (ctx) => {
 });
 
 // 检查时区是否有效
-const validateTimeZone = (tz) => {
+const checkTimeZoneValidity = (tz) => { 
     try {
         new Intl.DateTimeFormat('en-US', { timeZone: tz });
         return true;
@@ -81,13 +81,12 @@ const validateTimeZone = (tz) => {
     }
 };
 
-// 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const timeZone = ctx.match[1].trim();
 
     // 检查时区格式是否合法
-    if (!validateTimeZone(timeZone)) {
+    if (!checkTimeZoneValidity(timeZone)) {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
     }
 
@@ -119,7 +118,7 @@ const messages = {
     }
 };
 
-// 切换语言
+
 bot.hears(/^切换语言(\S+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const language = ctx.match[1].trim();
@@ -141,6 +140,7 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
         ctx.reply(messages['en-US'].languageChanged);
     }
 });
+
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
@@ -165,6 +165,7 @@ bot.hears(/计算(.+)/i, (ctx) => {
         ctx.reply('计算失败，请检查输入的表达式格式是否正确。例如："5+6*6-1/(6+3)"。');
     }
 });
+
 
 // **入款功能**
 bot.hears(/^\+\d+(u?)$/i, (ctx) => {
