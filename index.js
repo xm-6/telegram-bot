@@ -1,20 +1,23 @@
 const { Telegraf } = require('telegraf');
+const { json } = require('micro'); // 确保 micro 已安装
 require('dotenv').config();
 
-const { json } = require('micro'); // 确保 micro 已安装
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
-// Webhook 处理逻辑
+// 示例监听器，用于测试 Bot 是否正常运行
+bot.hears('ping', (ctx) => ctx.reply('pong'));
+
+// Webhook 入口
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
       const body = await json(req); // 解析请求体
-      await bot.handleUpdate(body); // 处理 Telegram 更新
+      await bot.handleUpdate(body); // 交由 Telegram Bot 处理
     } catch (error) {
       console.error('Error handling update:', error);
     }
   }
-  res.status(200).send('OK'); // 返回 HTTP 200 响应
+  res.status(200).send('OK'); // 确保 HTTP 200 响应
 };
 
 // 初始化 Bot
@@ -199,6 +202,3 @@ async function callTelegramApiWithRetries(method, data, retries = 3, timeout = 1
     }
   }
 }
-
-// 测试命令
-bot.hears('ping', (ctx) => ctx.reply('pong'));
