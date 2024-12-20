@@ -48,7 +48,11 @@ bot.catch((err, ctx) => {
 
 // **基础指令**
 bot.command('help', (ctx) => {
-    ctx.reply(`指令列表：
+    const chatId = ctx.chat.id;
+    const language = userLanguages[chatId] || 'zh-CN'; // 默认语言为中文
+
+    if (language === 'zh-CN') {
+        ctx.reply(`指令列表：
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
@@ -63,6 +67,23 @@ bot.command('help', (ctx) => {
 12. 计算<表达式> -- 计算数学表达式（如：5+6*6-1/(6+3)）
 13. 设置时区<时区名称> -- 设置当前记录使用的时区（如：Asia/Shanghai）
 14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`);
+    } else if (language === 'en-US') {
+        ctx.reply(`Command list:
+1. +100 -- Record deposit 100 CNY
+2. +100u -- Record deposit 100 USDT
+3. Withdraw 100 -- Record withdrawal 100 CNY
+4. Bill -- View current bill, including transaction time
+5. Summary -- View bill summary
+6. Set exchange rate 6.8 -- Set exchange rate to 6.8
+7. Set fee rate 0.5 -- Set fee rate to 0.5
+8. Delete current data -- Clear current bill
+9. Add operator -- Reply to message to add operator
+10. Remove operator -- Reply to message to remove operator
+11. Global broadcast <message> -- Broadcast message to all groups
+12. Calculate <expression> -- Calculate mathematical expression (e.g., 5+6*6-1/(6+3))
+13. Set timezone <timezone name> -- Set the timezone for current records (e.g., Asia/Shanghai)
+14. Switch language <language code> -- Switch bot language (e.g., zh-CN or en-US)`);
+    }
 });
 
 // Ping 测试
@@ -71,38 +92,17 @@ bot.hears('ping', (ctx) => {
     ctx.reply('pong');
 });
 
-// 检查时区是否有效
-const checkTimeZoneValidity = (tz) => { 
-    try {
-        new Intl.DateTimeFormat('en-US', { timeZone: tz });
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
+// 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const timeZone = ctx.match[1].trim();
 
-    // 检查时区格式是否合法
     if (!checkTimeZoneValidity(timeZone)) {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
     }
 
-    // 更新时区设置
     userTimeZones[chatId] = timeZone;
-
-    // 获取当前时间并返回
-    const currentTime = new Intl.DateTimeFormat('zh-CN', {
-        timeZone: timeZone,
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date());
-
-    console.log(`时区已设置为 ${timeZone}, 当前时间：${currentTime}`);
-
-    ctx.reply(`时区已设置为：${timeZone}\n当前时间：${currentTime}`);
+    ctx.reply(`时区已设置为：${timeZone}`);
 });
 
 const messages = {
@@ -144,28 +144,21 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
+// 计算表达式
 bot.hears(/计算(.+)/i, (ctx) => {
+    const expression = ctx.match[1].trim();
+
+    if (!mathExpressionRegex.test(expression)) {
+        return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
+    }
+
     try {
-        const expression = ctx.match[1].trim();  // 获取用户输入的表达式
-        console.log('计算指令输入:', expression);  // 输出捕获到的表达式
-
-        // 检查表达式是否合法
-        if (!mathExpressionRegex.test(expression)) {
-            return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
-        }
-
-        // 使用 Function 构造函数计算表达式
-        const result = new Function('return ' + expression)();  // 执行计算
-        console.log('计算结果:', result);  // 输出计算结果
-
-        // 返回计算结果
+        const result = new Function('return ' + expression)();
         ctx.reply(`计算结果：${result}`);
     } catch (error) {
-        console.error('计算错误:', error);  // 输出详细错误信息
-        ctx.reply('计算失败，请检查输入的表达式格式是否正确。例如："5+6*6-1/(6+3)"。');
+        ctx.reply('计算失败，请检查输入的表达式格式是否正确。');
     }
 });
-
 
 // **入款功能**
 bot.hears(/^\+\d+(u?)$/i, (ctx) => {
