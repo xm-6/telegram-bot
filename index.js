@@ -174,9 +174,6 @@ bot.hears(/^全局广播(.+)$/, (ctx) => {
   ctx.reply(`广播消息：${message}`);
 });
 
-// 操作员列表
-let operators = [];
-
 // 添加操作员
 bot.command('添加操作员', (ctx) => {
   const replyTo = ctx.message.reply_to_message;
