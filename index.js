@@ -1,16 +1,5 @@
 const { Telegraf } = require('telegraf');
 require('dotenv').config();
-
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-// 数据存储（简单实现）
-let accounts = {};
-let exchangeRate = 6.8;
-let fees = 0;
-let operators = [];
-
-const { Telegraf } = require('telegraf');
-require('dotenv').config();
 const fetch = require('node-fetch');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -75,6 +64,11 @@ module.exports = async (req, res) => {
   res.status(200).send('OK'); // 返回 HTTP 200 响应
 };
 
+// 数据存储（简单实现）
+let accounts = {};
+let exchangeRate = 6.8;
+let fees = 0;
+let operators = [];
 
 // 基础功能
 bot.start((ctx) => ctx.reply('欢迎使用后果定制机器人！输入 /help 查看指令。'));
