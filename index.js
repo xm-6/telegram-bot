@@ -141,6 +141,7 @@ bot.hears(/^删除当前数据$/i, (ctx) => {
     const id = ctx.chat.id;
     accounts[id] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
     ctx.reply('当前账单数据已清空。');
+});
 
 // **设置汇率**
 bot.hears(/^设置汇率(\d+(\.\d+)?)$/i, (ctx) => {
