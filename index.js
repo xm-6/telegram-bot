@@ -1,7 +1,9 @@
+// 引入依赖
 const { Telegraf } = require('telegraf');
 require('dotenv').config();
-const { json } = require('micro');
+const { json } = require('micro'); // 确保 micro 已安装
 
+// Webhook 处理逻辑
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
@@ -27,14 +29,14 @@ let operators = [];
 bot.start((ctx) => ctx.reply('欢迎使用账单机器人！输入 /help 查看指令。'));
 bot.help((ctx) => ctx.reply(
   `指令列表：\n` +
-  `+100 -- 记录入款 100 CNY\n` +
-  `+100u -- 记录入款 100 USDT\n` +
-  `下拨100 -- 记录出款 100 CNY\n` +
-  `账单 -- 查看当前账单\n` +
-  `汇总 -- 查看账单汇总\n` +
-  `设置汇率6.8 -- 设置汇率为 6.8\n` +
-  `设置费率0.5 -- 设置费率为 0.5\n` +
-  `删除当前数据 -- 清空当前账单\n` +
+  `1. +100 -- 记录入款 100 CNY\n` +
+  `2. +100u -- 记录入款 100 USDT\n` +
+  `3. 下拨100 -- 记录出款 100 CNY\n` +
+  `4. 账单 -- 查看当前账单\n` +
+  `5. 汇总 -- 查看账单汇总\n` +
+  `6. 设置汇率6.8 -- 设置汇率为 6.8\n` +
+  `7. 设置费率0.5 -- 设置费率为 0.5\n` +
+  `8. 删除当前数据 -- 清空当前账单\n`
   `添加操作员 -- 回复消息以添加操作员\n` +
   `删除操作员 -- 回复消息以删除操作员\n` +
   `全局广播<消息> -- 广播消息至所有群\n`
@@ -48,89 +50,103 @@ bot.on('message', (ctx) => {
 // 功能实现
 
 // 入款功能
-bot.hears(/^\+(\d+)(u?)$/, (ctx) => {
+bot.hears(/\+(\d+)\s*(u?)/i, (ctx) => {
   const amount = parseFloat(ctx.match[1]);
-  const currency = ctx.match[2] === 'u' ? 'USDT' : 'CNY';
+  const currency = ctx.match[2]?.toLowerCase() === 'u' ? 'USDT' : 'CNY';
   const id = ctx.chat.id;
 
-  if (!accounts[id]) accounts[id] = [];
-  accounts[id].push({ type: 'deposit', amount, currency });
+  if (!accounts[id]) {
+    // 初始化账单数据
+    accounts[id] = {
+      transactions: [],
+      totalDeposit: 0,
+      totalWithdrawal: 0,
+    };
+  }
 
-  ctx.reply(`已记录入款：${amount} ${currency}`);
+  // 记录入款交易
+  accounts[id].transactions.push({ type: 'deposit', amount, currency });
+  accounts[id].totalDeposit += amount;
+
+  // 返回入款记录及总计
+  ctx.reply(`\n入款已记录：${amount} ${currency}\n当前总入款：${accounts[id].totalDeposit} ${currency}`);
 });
 
 // 出款功能
-bot.hears(/^下拨(\d+)(u?)$/, (ctx) => {
+bot.hears(/下拨(\d+)\s*(u?)/i, (ctx) => {
   const amount = parseFloat(ctx.match[1]);
-  const currency = ctx.match[2] === 'u' ? 'USDT' : 'CNY';
+  const currency = ctx.match[2]?.toLowerCase() === 'u' ? 'USDT' : 'CNY';
   const id = ctx.chat.id;
 
-  if (!accounts[id]) accounts[id] = [];
-  accounts[id].push({ type: 'withdrawal', amount, currency });
+  if (!accounts[id]) {
+    // 初始化账单数据
+    accounts[id] = {
+      transactions: [],
+      totalDeposit: 0,
+      totalWithdrawal: 0,
+    };
+  }
 
-  ctx.reply(`已记录出款：${amount} ${currency}`);
+  // 记录出款交易
+  accounts[id].transactions.push({ type: 'withdrawal', amount, currency });
+  accounts[id].totalWithdrawal += amount;
+
+  // 返回出款记录及总计
+  ctx.reply(`\n出款已记录：${amount} ${currency}\n当前总出款：${accounts[id].totalWithdrawal} ${currency}`);
 });
 
 // 查看账单
 bot.command('账单', (ctx) => {
   const id = ctx.chat.id;
 
-  if (!accounts[id] || accounts[id].length === 0) {
-    return ctx.reply('账单为空。');
+  if (!accounts[id] || accounts[id].transactions.length === 0) {
+    return ctx.reply('当前没有账单记录。');
   }
 
-  let summary = `账单编号：${String(id).padStart(4, '0')}\n`;
-  accounts[id].forEach((entry, index) => {
-    summary += `${index + 1}. ${entry.type === 'deposit' ? '入款' : '出款'} ${entry.amount} ${entry.currency}\n`;
+  const { transactions, totalDeposit, totalWithdrawal } = accounts[id];
+  let details = `账单明细：\n`;
+  transactions.forEach((entry, index) => {
+    details += `${index + 1}. ${entry.type === 'deposit' ? '入款' : '出款'} ${entry.amount} ${entry.currency}\n`;
   });
 
-  ctx.reply(summary);
+  details += `\n-------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净回款：${totalDeposit - totalWithdrawal} CNY\n`;
+
+  ctx.reply(details);
 });
 
 // 汇总账单
 bot.command('汇总', (ctx) => {
   const id = ctx.chat.id;
 
-  if (!accounts[id] || accounts[id].length === 0) {
-    return ctx.reply('账单为空。');
+  if (!accounts[id] || accounts[id].transactions.length === 0) {
+    return ctx.reply('当前没有账单记录。');
   }
 
-  let totalDeposit = 0;
-  let totalWithdrawal = 0;
-
-  accounts[id].forEach((entry) => {
-    if (entry.type === 'deposit') totalDeposit += entry.amount;
-    if (entry.type === 'withdrawal') totalWithdrawal += entry.amount;
-  });
-
-  const summary = `
-账单汇总：
--------------------
-入款总计：${totalDeposit} CNY
-出款总计：${totalWithdrawal} CNY
-未回款：${totalDeposit - totalWithdrawal} CNY
-`;
-
-  ctx.reply(summary);
+  const { totalDeposit, totalWithdrawal } = accounts[id];
+  ctx.reply(`\n账单汇总：\n-------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净回款：${totalDeposit - totalWithdrawal} CNY`);
 });
 
 // 删除当前数据
 bot.command('删除当前数据', (ctx) => {
   const id = ctx.chat.id;
-  accounts[id] = [];
-  ctx.reply('已清空当前账单。');
+  accounts[id] = {
+    transactions: [],
+    totalDeposit: 0,
+    totalWithdrawal: 0,
+  };
+  ctx.reply('当前账单数据已清空。');
 });
 
 // 设置汇率
-bot.hears(/^设置汇率(\d+(\.\d+)?)$/, (ctx) => {
-  exchangeRate = parseFloat(ctx.match[1]);
-  ctx.reply(`汇率已设置为：${exchangeRate}`);
+bot.hears(/^设置汇率(\d+(\.\d+)?)/, (ctx) => {
+  const newRate = parseFloat(ctx.match[1]);
+  ctx.reply(`汇率已设置为：${newRate}`);
 });
 
 // 设置费率
-bot.hears(/^设置费率(\d+(\.\d+)?)$/, (ctx) => {
-  fees = parseFloat(ctx.match[1]);
-  ctx.reply(`费率已设置为：${fees}`);
+bot.hears(/^设置费率(\d+(\.\d+)?)/, (ctx) => {
+  const newFee = parseFloat(ctx.match[1]);
+  ctx.reply(`费率已设置为：${newFee}`);
 });
 
 // 查询命令
