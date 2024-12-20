@@ -17,11 +17,14 @@ module.exports = async (req, res) => {
     try {
       const body = await json(req); // 解析请求体
       await bot.handleUpdate(body); // 交由 Telegram Bot 处理
+      res.status(200).send('OK');  // 确保返回 HTTP 200
     } catch (error) {
       console.error('Error handling update:', error);
+      res.status(500).send('Internal Server Error'); // 返回错误状态
     }
+  } else {
+    res.status(200).send('Webhook is working!'); // 针对 GET 请求
   }
-  res.status(200).send('OK'); // 确保 HTTP 200 响应
 };
 
 // 数据存储（内存模拟）
