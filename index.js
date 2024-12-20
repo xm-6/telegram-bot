@@ -101,10 +101,22 @@ const isValidTimeZone = (tz) => {
 };
 
 // 设置时区
+// 检查时区是否有效
+const isValidTimeZone = (tz) => {
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+
+// 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const timeZone = ctx.match[1].trim();
 
+    // 检查时区格式是否合法
     if (!isValidTimeZone(timeZone)) {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
     }
@@ -112,9 +124,14 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     // 更新时区设置
     userTimeZones[chatId] = timeZone;
 
-    // 获取当前时间并显示
-    const currentTime = getCurrentTime(chatId);
-    console.log(`Time zone for user ${chatId} set to ${timeZone}, current time: ${currentTime}`);
+    // 获取当前时间并返回
+    const currentTime = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: timeZone,
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date());
+
+    console.log(`时区已设置为 ${timeZone}, 当前时间：${currentTime}`);
 
     ctx.reply(`时区已设置为：${timeZone}\n当前时间：${currentTime}`);
 });
@@ -124,15 +141,22 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const language = ctx.match[1].trim();
 
+    // 确认语言代码是否合法
     if (!['zh-CN', 'en-US'].includes(language)) {
         return ctx.reply('无效的语言代码，请输入 zh-CN 或 en-US。');
     }
 
-    // 更新语言设置
+    // 更新用户语言设置
     userLanguages[chatId] = language;
-    console.log(`Language changed for user ${chatId} to ${language}`);
-    
-    ctx.reply(messages[language].languageChanged); // 发送语言切换反馈
+
+    console.log(`语言已切换为：${language}`);
+
+    // 根据语言反馈切换消息
+    if (language === 'zh-CN') {
+        ctx.reply(messages['zh-CN'].languageChanged);
+    } else if (language === 'en-US') {
+        ctx.reply(messages['en-US'].languageChanged);
+    }
 });
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
@@ -140,18 +164,21 @@ const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字�
 bot.hears(/计算(.+)/i, (ctx) => {
     try {
         const expression = ctx.match[1].trim();  // 获取用户输入的表达式
-        console.log('计算指令输入:', expression);
+        console.log('计算指令输入:', expression);  // 输出捕获到的表达式
 
-        // 检查是否是有效的数学表达式
+        // 检查表达式是否合法
         if (!mathExpressionRegex.test(expression)) {
             return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
         }
 
         // 使用 Function 构造函数计算表达式
         const result = new Function('return ' + expression)();  // 执行计算
+        console.log('计算结果:', result);  // 输出计算结果
+
+        // 返回计算结果
         ctx.reply(`计算结果：${result}`);
     } catch (error) {
-        console.error('计算错误:', error);
+        console.error('计算错误:', error);  // 输出详细错误信息
         ctx.reply('计算失败，请检查输入的表达式格式是否正确。例如："5+6*6-1/(6+3)"。');
     }
 });
