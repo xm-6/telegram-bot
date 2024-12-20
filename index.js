@@ -47,12 +47,9 @@ bot.catch((err, ctx) => {
 });
 
 // **基础指令**
-bot.command('help', (ctx) => {
-    const chatId = ctx.chat.id;
-    const language = userLanguages[chatId] || 'zh-CN'; // 默认语言为中文
-
-    if (language === 'zh-CN') {
-        ctx.reply(`指令列表：
+const messages = {
+    'zh-CN': {
+        help: `指令列表：
 1. +100 -- 记录入款 100 CNY
 2. +100u -- 记录入款 100 USDT
 3. 下拨100 -- 记录出款 100 CNY
@@ -66,9 +63,12 @@ bot.command('help', (ctx) => {
 11. 全局广播<消息> -- 广播消息至所有群
 12. 计算<表达式> -- 计算数学表达式（如：5+6*6-1/(6+3)）
 13. 设置时区<时区名称> -- 设置当前记录使用的时区（如：Asia/Shanghai）
-14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`);
-    } else if (language === 'en-US') {
-        ctx.reply(`Command list:
+14. 切换语言<语言代码> -- 切换机器人语言（如：zh-CN 或 en-US）`,
+        languageChanged: "语言已切换为：中文。",
+        invalidLanguage: "无效的语言代码，请输入 zh-CN 或 en-US。",
+    },
+    'en-US': {
+        help: `Command list:
 1. +100 -- Record deposit 100 CNY
 2. +100u -- Record deposit 100 USDT
 3. Withdraw 100 -- Record withdrawal 100 CNY
@@ -82,7 +82,21 @@ bot.command('help', (ctx) => {
 11. Global broadcast <message> -- Broadcast message to all groups
 12. Calculate <expression> -- Calculate mathematical expression (e.g., 5+6*6-1/(6+3))
 13. Set timezone <timezone name> -- Set the timezone for current records (e.g., Asia/Shanghai)
-14. Switch language <language code> -- Switch bot language (e.g., zh-CN or en-US)`);
+14. Switch language <language code> -- Switch bot language (e.g., zh-CN or en-US)`,
+        languageChanged: "Language switched to: English.",
+        invalidLanguage: "Invalid language code. Please enter zh-CN or en-US.",
+    }
+};
+
+// 帮助指令
+bot.command('help', (ctx) => {
+    const chatId = ctx.chat.id;
+    const language = userLanguages[chatId] || 'zh-CN'; // 默认语言为中文
+
+    if (language === 'zh-CN') {
+        ctx.reply(messages['zh-CN'].help);
+    } else if (language === 'en-US') {
+        ctx.reply(messages['en-US'].help);
     }
 });
 
@@ -91,6 +105,16 @@ bot.hears('ping', (ctx) => {
     console.log('Ping command triggered');
     ctx.reply('pong');
 });
+
+// 检查时区有效性
+const checkTimeZoneValidity = (timeZone) => {
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
 
 // 设置时区
 bot.hears(/^设置时区 (.+)$/i, (ctx) => {
@@ -105,27 +129,15 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     ctx.reply(`时区已设置为：${timeZone}`);
 });
 
-const messages = {
-    'zh-CN': {
-        help: '指令列表：\n1. +100 -- 记录入款 100 CNY\n2. +100u -- 记录入款 100 USDT\n...',
-        languageChanged: "语言已切换为：中文。",
-        invalidLanguage: "无效的语言代码，请输入 zh-CN 或 en-US。",
-    },
-    'en-US': {
-        help: 'Command list:\n1. +100 -- Record deposit 100 CNY\n2. +100u -- Record deposit 100 USDT\n...',
-        languageChanged: "Language switched to: English.",
-        invalidLanguage: "Invalid language code. Please enter zh-CN or en-US.",
-    }
-};
 
-
+// 切换语言
 bot.hears(/^切换语言(\S+)$/i, (ctx) => {
     const chatId = ctx.chat.id;
     const language = ctx.match[1].trim();
 
     // 确认语言代码是否合法
     if (!['zh-CN', 'en-US'].includes(language)) {
-        return ctx.reply('无效的语言代码，请输入 zh-CN 或 en-US。');
+        return ctx.reply(messages[language]?.invalidLanguage || messages['zh-CN'].invalidLanguage);
     }
 
     // 更新用户语言设置
@@ -144,7 +156,8 @@ bot.hears(/^切换语言(\S+)$/i, (ctx) => {
 
 const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 
-// 计算表达式
+// 计算数学表达式
+const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
 bot.hears(/计算(.+)/i, (ctx) => {
     const expression = ctx.match[1].trim();
 
@@ -153,7 +166,7 @@ bot.hears(/计算(.+)/i, (ctx) => {
     }
 
     try {
-        const result = new Function('return ' + expression)();
+        const result = eval(expression); // 使用 eval 或引入其他库
         ctx.reply(`计算结果：${result}`);
     } catch (error) {
         ctx.reply('计算失败，请检查输入的表达式格式是否正确。');
