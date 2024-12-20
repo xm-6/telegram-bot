@@ -53,10 +53,13 @@ bot.command('测试', async (ctx) => {
 });
 
 // Webhook 处理逻辑
+const { json } = require('micro'); // 安装 micro: npm install micro
+
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
-      await bot.handleUpdate(req.body); // 使用 handleUpdate 处理 Telegram 更新
+      const body = await json(req); // 解析请求体
+      await bot.handleUpdate(body); // 处理 Telegram 更新
     } catch (error) {
       console.error('Error handling update:', error);
     }
