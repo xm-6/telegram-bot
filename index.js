@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// 数据存储 (简单实现，实际可用数据库)
+// 数据存储 (简单实现)
 let accounts = {};
 let exchangeRate = 6.8;
 let fees = 0;
@@ -12,8 +12,20 @@ let operators = [];
 // 功能实现
 bot.start((ctx) => ctx.reply('欢迎使用后果定制机器人！输入 /help 查看指令。'));
 bot.help((ctx) => {
-  ctx.reply(`操作帮助:\n+1000 -- 入款1000\n+1000u -- 入款1000 USDT\n下拨1000 -- 出款1000\n下拨1000u -- 出款1000 USDT\n账单 -- 查看账单\n删除当前数据 -- 清空当前账单\n设置汇率6.8 -- 设置美元汇率\n设置费率0 -- 设置费率\nokx -- 获取实时欧易汇率\n上课 -- 允许群成员发言\n下课 -- 禁止群成员发言\n添加操作员 -- 回复用户消息以添加操作员\n删除操作员 -- 回复用户消息以删除操作员\n查询<地址> -- 查询 TRX 地址信息。\n查询<手机号> -- 查询手机号信息。\n查询<银行卡号> -- 查询银行卡信息。\n全局广播<消息> -- 广播消息至所有群（仅所有者有权限）。`);
+  ctx.reply(`操作帮助:\\n+1000 -- 入款1000\\n+1000u -- 入款1000 USDT\\n下拨1000 -- 出款1000\\n下拨1000u -- 出款1000 USDT\\n账单 -- 查看账单\\n删除当前数据 -- 清空当前账单\\n设置汇率6.8 -- 设置美元汇率\\n设置费率0 -- 设置费率\\nokx -- 获取实时欧易汇率\\n上课 -- 允许群成员发言\\n下课 -- 禁止群成员发言\\n添加操作员 -- 回复用户消息以添加操作员\\n删除操作员 -- 回复用户消息以删除操作员\\n查询<地址> -- 查询 TRX 地址信息。\\n查询<手机号> -- 查询手机号信息。\\n查询<银行卡号> -- 查询银行卡信息。\\n全局广播<消息> -- 广播消息至所有群（仅所有者有权限）。`);
 });
+
+// 包装为 Vercel 函数
+module.exports = async (req, res) => {
+  if (req.method === 'POST') {
+    try {
+      await bot.handleUpdate(req.body); // 处理 Telegram Webhook 请求
+    } catch (error) {
+      console.error('Error handling update:', error);
+    }
+  }
+  res.status(200).send('OK'); // 确保响应成功
+};
 
 // 入款和出款
 bot.hears(/^\+(\d+)(u?)$/, (ctx) => {
