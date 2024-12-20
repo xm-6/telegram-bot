@@ -90,19 +90,8 @@ bot.hears('ping', (ctx) => {
     ctx.reply('pong');
 });
 
-// 设置时区
-const isValidTimeZone = (tz) => {
-    try {
-        new Intl.DateTimeFormat('en-US', { timeZone: tz });
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
-// 设置时区
-// 检查时区是否有效
-const isValidTimeZone = (tz) => {
+// 改变函数名以避免冲突
+const validateTimeZone = (tz) => {
     try {
         new Intl.DateTimeFormat('en-US', { timeZone: tz });
         return true;
@@ -117,7 +106,7 @@ bot.hears(/^设置时区 (.+)$/i, (ctx) => {
     const timeZone = ctx.match[1].trim();
 
     // 检查时区格式是否合法
-    if (!isValidTimeZone(timeZone)) {
+    if (!validateTimeZone(timeZone)) {
         return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
     }
 
