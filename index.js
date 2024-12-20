@@ -2,6 +2,18 @@ const { Telegraf } = require('telegraf');
 require('dotenv').config();
 const { json } = require('micro');
 
+module.exports = async (req, res) => {
+  if (req.method === 'POST') {
+    try {
+      const body = await json(req); // 解析请求体
+      await bot.handleUpdate(body); // 处理 Telegram 更新
+    } catch (error) {
+      console.error('Error handling update:', error);
+    }
+  }
+  res.status(200).send('OK'); // 返回 HTTP 200 响应
+};
+
 // 初始化 Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -213,18 +225,3 @@ bot.command('测试', async (ctx) => {
     ctx.reply('发送失败，请稍后重试。');
   }
 });
-
-// Webhook 处理逻辑
-const { json } = require('micro'); // 安装 micro: npm install micro
-
-module.exports = async (req, res) => {
-  if (req.method === 'POST') {
-    try {
-      const body = await json(req); // 解析请求体
-      await bot.handleUpdate(body); // 处理 Telegram 更新
-    } catch (error) {
-      console.error('Error handling update:', error);
-    }
-  }
-  res.status(200).send('OK'); // 返回 HTTP 200 响应
-};
