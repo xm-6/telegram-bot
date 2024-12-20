@@ -9,12 +9,18 @@ let exchangeRate = 6.8;
 let fees = 0;
 let operators = [];
 
-// 自定义 Telegram API 调用函数，增加超时和重试机制
-async function callTelegramApi(method, data, maxRetries = 3, timeout = 10000) {
+const { Telegraf } = require('telegraf');
+require('dotenv').config();
+const fetch = require('node-fetch');
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
+// 超时和重试机制
+async function callTelegramApiWithRetries(method, data, retries = 3, timeout = 15000) {
   const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/${method}`;
   let attempts = 0;
 
-  while (attempts < maxRetries) {
+  while (attempts < retries) {
     try {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
@@ -23,24 +29,52 @@ async function callTelegramApi(method, data, maxRetries = 3, timeout = 10000) {
         method: 'POST',
         body: JSON.stringify(data),
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal, // 超时信号
+        signal: controller.signal,
       });
 
-      clearTimeout(id); // 请求成功后清理超时
+      clearTimeout(id);
+
       if (!response.ok) {
         throw new Error(`Telegram API error: ${response.statusText}`);
       }
 
-      return await response.json(); // 返回解析后的响应
+      return await response.json();
     } catch (error) {
       attempts++;
       console.error(`Attempt ${attempts} failed:`, error.message);
-      if (attempts >= maxRetries) {
-        throw new Error('Max retries reached, aborting.');
+      if (attempts >= retries) {
+        throw new Error('Max retries reached. Request failed.');
       }
     }
   }
 }
+
+// 测试命令
+bot.command('测试', async (ctx) => {
+  try {
+    const response = await callTelegramApiWithRetries('sendMessage', {
+      chat_id: ctx.chat.id,
+      text: '测试消息',
+    });
+    console.log('Message sent:', response);
+  } catch (error) {
+    console.error('Failed to send message:', error.message);
+    ctx.reply('发送失败，请稍后重试。');
+  }
+});
+
+// Webhook 处理逻辑
+module.exports = async (req, res) => {
+  if (req.method === 'POST') {
+    try {
+      await bot.handleUpdate(req.body); // 使用 handleUpdate 处理 Telegram 更新
+    } catch (error) {
+      console.error('Error handling update:', error);
+    }
+  }
+  res.status(200).send('OK'); // 返回 HTTP 200 响应
+};
+
 
 // 基础功能
 bot.start((ctx) => ctx.reply('欢迎使用后果定制机器人！输入 /help 查看指令。'));
@@ -64,19 +98,6 @@ bot.help((ctx) => ctx.reply(
   `查询<银行卡号> -- 查询银行卡信息\n` +
   `全局广播<消息> -- 广播消息至所有群（仅所有者有权限）。`
 ));
-
-
-// 包装为 Vercel 函数
-module.exports = async (req, res) => {
-  if (req.method === 'POST') {
-    try {
-      await bot.handleUpdate(req.body); // 使用 handleUpdate 处理 Webhook 推送
-    } catch (error) {
-      console.error('Error handling update:', error);
-    }
-  }
-  res.status(200).send('OK'); // 返回 200 表示成功处理
-};
 
 
 // 功能实现
