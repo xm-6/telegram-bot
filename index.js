@@ -240,7 +240,7 @@ bot.hears(/^\+\d+(u?)$/i, (ctx) => {
         accounts[id].transactions.push({ type: 'deposit', amount, currency, time: getCurrentTime(id) });
         accounts[id].totalDeposit += amount;
 
-        console.log('Updated accounts:', accounts);
+        console.log('Updated accounts:', JSON.stringify(accounts, null, 2));
         ctx.reply(`入款已记录：${amount} ${currency}\n时间：${new Date().toLocaleString()}\n当前总入款：${accounts[id].totalDeposit} ${currency}`);
     } catch (error) {
         console.error('Error in deposit command:', error);
@@ -377,18 +377,6 @@ bot.hears(/^删除操作员$/i, (ctx) => {
     }
 });
 
-// **查询命令**
-bot.hears(/^查询<(.+)>$/, (ctx) => {
-    try {
-        const query = ctx.match[1];
-        console.log(`Query command triggered with query: ${query}`);
-        ctx.reply(`查询结果：暂时无法获取 "${query}" 的信息。`);
-    } catch (error) {
-        console.error('Error in query command:', error);
-        ctx.reply('查询失败，请稍后再试。');
-    }
-});
-
 // **上课与下课**
 bot.command('上课', (ctx) => {
     console.log('上课 command triggered');
@@ -400,15 +388,16 @@ bot.command('下课', (ctx) => {
     ctx.reply('禁止群成员发言');
 });
 
-// **全局广播（需要 OWNER_ID 权限）**
 bot.hears(/^全局广播(.+)$/i, (ctx) => {
-    console.log('广播 command triggered');
+    console.log('广播 command triggered by:', ctx.chat.id);
     if (ctx.chat.id.toString() !== String(process.env.OWNER_ID)) {
+        console.log('权限验证失败:', ctx.chat.id);
         return ctx.reply('无权限操作。');
     }
 
     const message = ctx.match[1];
     ctx.reply(`广播消息：${message}`);
+    console.log('广播消息成功:', message);
 });
 
 // **超时和重试机制**
