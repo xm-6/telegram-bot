@@ -16,6 +16,23 @@ const getCurrentTime = (chatId) => {
 };
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
+const { MongoClient } = require('mongodb');
+let db;
+
+
+// 初始化 MongoDB 连接
+const client = new MongoClient(process.env.MONGODB_URI);
+(async () => {
+    try {
+        await client.connect();
+        console.log("Connected to MongoDB");
+        db = client.db(process.env.MONGODB_DB);
+    } catch (error) {
+        console.error("MongoDB connection failed:", error);
+    }
+})();
+
+
 // 数据存储（内存模拟）
 let accounts = {}; // 存储每个聊天的账单信息
 let userTimeZones = {}; // 存储每个用户的时区设置，默认 'Asia/Shanghai'
@@ -106,68 +123,85 @@ bot.hears('ping', (ctx) => {
     ctx.reply('pong');
 });
 
-// 检查时区有效性
-const checkTimeZoneValidity = (timeZone) => {
-    try {
-        new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
+const moment = require('moment-timezone');
 
 // 设置时区
-bot.hears(/^设置时区 (.+)$/i, (ctx) => {
-    const chatId = ctx.chat.id;
-    const timeZone = ctx.match[1].trim();
-
-    if (!checkTimeZoneValidity(timeZone)) {
-        return ctx.reply('无效的时区，请输入正确的时区名称（如：Asia/Shanghai）。');
+bot.command('设置时区', async (ctx) => {
+    const timezone = ctx.message.text.split(' ')[1];
+    if (!moment.tz.zone(timezone)) {
+        return ctx.reply('无效的时区，请输入有效的时区名称。例如：Asia/Shanghai');
     }
 
-    userTimeZones[chatId] = timeZone;
-    ctx.reply(`时区已设置为：${timeZone}`);
+    const userId = ctx.from.id;
+    await db.collection('users').updateOne(
+        { userId },
+        { $set: { timezone } },
+        { upsert: true }
+    );
+
+    ctx.reply(`时区已设置为：${timezone}`);
+});
+
+// 显示当前时间
+bot.command('当前时间', async (ctx) => {
+    const userId = ctx.from.id;
+    const user = await db.collection('users').findOne({ userId });
+    const timezone = user?.timezone || 'UTC';
+
+    const currentTime = moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+    ctx.reply(`当前时间（${timezone}）：${currentTime}`);
 });
 
 
-// 切换语言
-bot.hears(/^切换语言(\S+)$/i, (ctx) => {
-    const chatId = ctx.chat.id;
-    const language = ctx.match[1].trim();
+// 设置语言命令
+bot.command('设置语言', async (ctx) => {
+    const lang = ctx.message.text.split(' ')[1];
+    const supportedLanguages = ['en', 'zh'];
 
-    // 确认语言代码是否合法
-    if (!['zh-CN', 'en-US'].includes(language)) {
-        return ctx.reply(messages['zh-CN'].invalidLanguage);
+    if (!supportedLanguages.includes(lang)) {
+        return ctx.reply('不支持的语言，请选择：en（英语）或 zh（中文）');
     }
 
-    // 更新用户语言设置
-    userLanguages[chatId] = language;
-    console.log(`语言已切换为：${language}`);
+    const userId = ctx.from.id;
+    await db.collection('users').updateOne(
+        { userId },
+        { $set: { language: lang } },
+        { upsert: true }
+    );
 
-    // 根据语言反馈切换消息
-    if (language === 'zh-CN') {
-        ctx.reply(messages['zh-CN'].languageChanged);
-    } else if (language === 'en-US') {
-        ctx.reply(messages['en-US'].languageChanged);
-    }
+    ctx.reply(`语言已设置为：${lang === 'zh' ? '中文' : 'English'}`);
 });
+
+// 获取用户语言
+async function getUserLanguage(userId) {
+    const user = await db.collection('users').findOne({ userId });
+    return user?.language || defaultLanguage;
+}
+
+// 示例回复
+bot.command('测试语言', async (ctx) => {
+    const userLang = await getUserLanguage(ctx.from.id);
+    const responses = {
+        en: 'Hello!',
+        zh: '你好！',
+    };
+    ctx.reply(responses[userLang]);
+});
+
 
 // 计算数学表达式
-const mathExpressionRegex = /^[\d+\-*/().\s]+$/; // 允许的数学表达式字符
-bot.hears(/计算(.+)/i, (ctx) => {
-    const expression = ctx.match[1].trim();
-
-    if (!mathExpressionRegex.test(expression)) {
-        return ctx.reply('输入的表达式不合法，请检查是否包含非法字符。');
-    }
-
+const math = require('mathjs'); // 安装 math.js 库
+// 处理计算命令
+bot.command('计算', (ctx) => {
+    const input = ctx.message.text.split(' ').slice(1).join(' ');
     try {
-        const result = eval(expression); // 使用 eval 或引入其他库
-        ctx.reply(`计算结果：${result}`);
+        const result = math.evaluate(input);
+        ctx.reply(`结果：${result}`);
     } catch (error) {
-        ctx.reply('计算失败，请检查输入的表达式格式是否正确。');
+        ctx.reply('无效的计算表达式，请输入正确的数学公式。例如：/计算 5+3*2');
     }
 });
+
 
 // **入款功能**
 bot.hears(/^\+\d+(u?)$/i, (ctx) => {
