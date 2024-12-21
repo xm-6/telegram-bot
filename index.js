@@ -164,80 +164,63 @@ const moment = require('moment-timezone');
 
 // 时区设置命令
 bot.command('设置时区', async (ctx) => {
-    // 从用户输入中解析时区名称
     const timezone = ctx.message.text.split(' ')[1];
-    
-    // 检查输入的时区是否有效
-    if (!moment.tz.zone(timezone)) {
-        return ctx.reply('无效的时区，请输入有效的时区名称。例如：Asia/Shanghai');
+    if (!timezone) {
+        return ctx.reply('请输入有效的时区名称。例如：Asia/Shanghai');
     }
-
-    // 获取用户 ID
-    const userId = ctx.from.id;
-
     try {
-        // 更新 MongoDB 中的时区记录
-        const updateResponse = await db.collection('users').updateOne(
-            { userId }, // 查询条件
-            { $set: { timezone } }, // 更新时区字段
-            { upsert: true } // 如果没有记录则插入
+        // 假设使用 MongoDB 保存用户时区
+        const userId = ctx.from.id;
+        const updateResult = await db.collection('users').updateOne(
+            { userId },
+            { $set: { timezone } },
+            { upsert: true }
         );
-
-        console.log('MongoDB 更新结果:', updateResponse);
-        ctx.reply(`时区已成功设置为：${timezone}`);
+        console.log('Timezone updated:', updateResult);
+        ctx.reply(`时区已设置为：${timezone}`);
     } catch (error) {
-        console.error('时区设置时 MongoDB 出错:', error);
-        ctx.reply('设置时区失败，请稍后再试。');
+        console.error('Timezone error:', error);
+        ctx.reply('时区设置失败，请稍后再试。');
     }
 });
 
 
 // 设置语言命令
 bot.command('设置语言', async (ctx) => {
-    // 从用户输入中解析语言代码
     const lang = ctx.message.text.split(' ')[1];
-    
-    // 支持的语言列表
     const supportedLanguages = ['zh', 'en'];
-
-    // 检查输入的语言代码是否有效
     if (!supportedLanguages.includes(lang)) {
         return ctx.reply('不支持的语言，请选择：en（英语）或 zh（中文）');
     }
-
-    // 获取用户 ID
-    const userId = ctx.from.id;
-
     try {
-        // 更新 MongoDB 中的语言记录
-        const updateResponse = await db.collection('users').updateOne(
-            { userId }, // 查询条件
-            { $set: { language: lang } }, // 更新语言字段
-            { upsert: true } // 如果没有记录则插入
+        const userId = ctx.from.id;
+        await db.collection('users').updateOne(
+            { userId },
+            { $set: { language: lang } },
+            { upsert: true }
         );
-
-        console.log('MongoDB 更新结果:', updateResponse);
-        ctx.reply(`语言已成功设置为：${lang === 'zh' ? '中文' : 'English'}`);
+        ctx.reply(`语言已设置为：${lang === 'zh' ? '中文' : 'English'}`);
     } catch (error) {
-        console.error('语言设置时 MongoDB 出错:', error);
-        ctx.reply('设置语言失败，请稍后再试。');
+        console.error('Language error:', error);
+        ctx.reply('语言设置失败，请稍后再试。');
     }
 });
 
 
 // 计算数学表达式
-const math = require('mathjs'); // 安装 math.js 库
-// 处理计算命令
+const math = require('mathjs');
+
 bot.command('计算', (ctx) => {
     const input = ctx.message.text.split(' ').slice(1).join(' ');
     if (!input) {
-        return ctx.reply('请提供一个数学表达式。例如：/计算 5+3*2');
+        return ctx.reply('请输入数学表达式。例如：/计算 5+3*2');
     }
     try {
         const result = math.evaluate(input);
         ctx.reply(`结果：${result}`);
     } catch (error) {
-        ctx.reply('无效的计算表达式，请输入正确的数学公式。例如：/计算 5+3*2');
+        console.error('Math error:', error);
+        ctx.reply('无效的数学表达式，请重新输入。例如：/计算 5+3*2');
     }
 });
 
