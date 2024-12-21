@@ -73,16 +73,16 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const transactionTime = getUserTime(accountId);
         accounts[accountId].push({ type: '入款', amount, currency, time: transactionTime });
 
-        const transactions = accounts[accountId].slice(-5);
-        const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const depositCount = accounts[accountId].filter(e => e.type === '入款').length;
+        const withdrawalCount = accounts[accountId].filter(e => e.type === '出款').length;
         const netTotal = totalDeposit - totalWithdrawal;
         const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
+        ctx.reply(`记录成功！\n当前净总和：${netTotal} CNY\nUSDT：${netInUSDT}\n入款笔数：${depositCount}，出款笔数：${withdrawalCount}`);
     });
-
+    
     // 记录出款
     bot.hears(/^-(\d+)/, (ctx) => {
         if (!hasPermission(ctx, PERMISSION_LEVELS.OPERATOR)) {
@@ -95,16 +95,16 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const transactionTime = getUserTime(accountId);
         accounts[accountId].push({ type: '出款', amount, currency, time: transactionTime });
 
-        const transactions = accounts[accountId].slice(-5);
-        const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const depositCount = accounts[accountId].filter(e => e.type === '入款').length;
+        const withdrawalCount = accounts[accountId].filter(e => e.type === '出款').length;
         const netTotal = totalDeposit - totalWithdrawal;
         const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
+        ctx.reply(`记录成功！\n当前净总和：${netTotal} CNY\nUSDT：${netInUSDT}\n入款笔数：${depositCount}，出款笔数：${withdrawalCount}`);
     });
-
+    
     // 查看账单
     bot.command('账单', (ctx) => {
         if (!hasPermission(ctx, PERMISSION_LEVELS.OPERATOR)) {
@@ -114,14 +114,16 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!accounts[accountId] || accounts[accountId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
-        const transactions = accounts[accountId].slice(-5);
-        const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
-        const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
-        const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const transactions = accounts[accountId];
+        const details = transactions.map((entry) => `${entry.amount} ${entry.currency} ${entry.type} [${entry.time}]`).join('\n');
+        const totalDeposit = transactions.filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
+        const totalWithdrawal = transactions.filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const depositCount = transactions.filter(e => e.type === '入款').length;
+        const withdrawalCount = transactions.filter(e => e.type === '出款').length;
         const netTotal = totalDeposit - totalWithdrawal;
         const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
+        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n所有记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n入款笔数：${depositCount}，出款笔数：${withdrawalCount}\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
     });
 
     // 添加操作员
@@ -132,8 +134,12 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const username = ctx.message.text.split(' ')[1];
         if (username && username.startsWith('@')) {
             const userId = username.slice(1);
-            userPermissions[userId] = PERMISSION_LEVELS.OPERATOR;
-            ctx.reply(`已添加操作员：${username}`);
+            if (!userPermissions[userId]) {
+                userPermissions[userId] = PERMISSION_LEVELS.OPERATOR;
+                ctx.reply(`已添加操作员：${username}`);
+            } else {
+                ctx.reply(`${username} 已经是操作员或更高级权限用户。`);
+            }
         } else {
             ctx.reply('请使用 @用户名 格式指定用户以添加操作员。');
         }
@@ -147,14 +153,18 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const username = ctx.message.text.split(' ')[1];
         if (username && username.startsWith('@')) {
             const userId = username.slice(1);
-            delete userPermissions[userId];
-            ctx.reply(`已删除操作员：${username}`);
+            if (userPermissions[userId] && userPermissions[userId] === PERMISSION_LEVELS.OPERATOR) {
+                delete userPermissions[userId];
+                ctx.reply(`已删除操作员：${username}`);
+            } else {
+                ctx.reply(`${username} 不是操作员或权限更高，无法删除。`);
+            }
         } else {
             ctx.reply('请使用 @用户名 格式指定用户以删除操作员。');
         }
     });
 
-        // 设置权限
+    // 设置权限
     bot.command('设置权限', (ctx) => {
         if (!hasPermission(ctx, PERMISSION_LEVELS.SUPER_ADMIN)) {
             return ctx.reply('您无权执行此操作。');
