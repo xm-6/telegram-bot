@@ -1,7 +1,6 @@
 // 引入依赖
 const { Telegraf } = require('telegraf');
-const { json } = require('micro');
-require('dotenv').config();
+const { MongoClient } = require('mongodb');
 const http = require('http');
 require('dotenv').config();
 
@@ -57,6 +56,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
         console.log('Bot stopped and MongoDB connection closed');
     });
 })();
+
 
 // 初始化 Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
