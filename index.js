@@ -69,32 +69,6 @@ const getCurrentTime = (chatId) => {
 };
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
-
-const { MongoClient } = require('mongodb');
-
-// 从环境变量加载
-const uri = process.env.MONGODB_URI;
-if (!uri) {
-    console.error("MONGODB_URI is not defined!");
-    process.exit(1);
-}
-
-let db;
-const client = new MongoClient(uri);
-
-(async () => {
-    try {
-        await client.connect();
-        console.log("Connected to MongoDB");
-        db = client.db(process.env.MONGODB_DB || 'test'); // 使用默认数据库 'test'
-        console.log(`Using database: ${db.databaseName}`);
-    } catch (error) {
-        console.error('MongoDB connection error:', error);
-        process.exit(1);
-    }
-})();
-
-
 // 数据存储（内存模拟）
 let accounts = {}; // 存储每个聊天的账单信息
 let userTimeZones = {}; // 存储每个用户的时区设置，默认 'Asia/Shanghai'
