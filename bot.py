@@ -12,7 +12,7 @@ MONGO_URI = config('MONGO_URI')
 RESTRICTED_MODE = config('RESTRICTED_MODE', default='1')  # 默认为1，表示不限制
 
 # 设置仅允许使用机器人的用户ID（例如，您的用户ID）
-ALLOWED_USER_ID = 123456789  # 替换为您的实际用户ID
+ALLOWED_USER_ID = 6652948422  # 替换为您的实际用户ID
 
 # 初始化日志记录器
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s', level=logging.INFO)
