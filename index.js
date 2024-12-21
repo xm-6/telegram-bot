@@ -2,36 +2,65 @@
 const { Telegraf } = require('telegraf');
 const { json } = require('micro');
 require('dotenv').config();
-const botToken = process.env.BOT_TOKEN;
-const mongoUri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB;
+const http = require('http');
+require('dotenv').config();
 
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '1.1.1.1']); // Google 和 Cloudflare 公共 DNS
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
+(async () => {
+    const mongoUri = process.env.MONGODB_URI;
+    const dbName = process.env.MONGODB_DB;
 
-// 检查是否正确加载环境变量
-if (!botToken) {
-    console.error('Error: BOT_TOKEN is not defined!');
-    process.exit(1); // 停止程序运行
-}
+    const client = new MongoClient(mongoUri);
 
-if (!mongoUri) {
-    console.error('Error: MONGODB_URI is not defined!');
-    process.exit(1); // 停止程序运行
-}
+    try {
+        console.log('Connecting to MongoDB...');
+        await client.connect();
+        console.log('Connected to MongoDB');
+        const db = client.db(dbName);
+        console.log(`Using database: ${db.databaseName}`);
 
-if (!dbName) {
-    console.error('Error: MONGODB_DB is not defined!');
-    process.exit(1); // 停止程序运行
-}
+        // 初始化 Telegram Bot 的命令
+        bot.command('start', (ctx) => {
+            ctx.reply('Hello! The bot is running and connected to MongoDB.');
+        });
 
-console.log(`Bot Token: ${botToken}`);
-console.log(`MongoDB URI: ${mongoUri}`);
-console.log(`Database Name: ${dbName}`);
+        // 启动 Telegram Bot
+        bot.launch();
+        console.log('Telegram Bot is running...');
+    } catch (err) {
+        console.error('Failed to connect to MongoDB:', err.message);
+        process.exit(1); // 出现错误时退出
+    }
+
+    // 创建 HTTP 服务器保持容器活跃
+    const server = http.createServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Bot is running and connected to MongoDB.\n');
+    });
+
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, () => {
+        console.log(`Server is listening on port ${PORT}`);
+    });
+
+    // 优雅关闭
+    process.on('SIGINT', () => {
+        bot.stop('SIGINT');
+        client.close();
+        console.log('Bot stopped and MongoDB connection closed');
+    });
+
+    process.on('SIGTERM', () => {
+        bot.stop('SIGTERM');
+        client.close();
+        console.log('Bot stopped and MongoDB connection closed');
+    });
+})();
 
 // 初始化 Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
 // 获取指定时区的当前时间
 const getCurrentTime = (chatId) => {
     const timeZone = userTimeZones[chatId] || 'Asia/Shanghai'; // 默认为上海时区
