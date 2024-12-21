@@ -31,22 +31,41 @@ let feeRate = 0.5; // 默认费率
     });
 
     bot.command('help', (ctx) => {
-        ctx.reply(`支持的指令：
+        const userId = ctx.from.id;
+        const language = userSettings[userId]?.language || 'zh-CN';
+        const messages = {
+            'zh-CN': `支持的指令：
 1. +100 -- 记录入款 100
-2. -100 -- 记录入款 -100
-3. 下发100 -- 记录出款 100
-4. 账单 -- 查看当前账单
-5. 汇总 -- 查看账单汇总
-6. 设置汇率6.8 -- 设置汇率为 6.8
-7. 设置费率0.5 -- 设置费率为 0.5
-8. 删除当前数据 -- 清空当前账单
-9. 添加操作员 -- 回复消息以添加操作员
-10. 删除操作员 -- 回复消息以删除操作员
-11. 全局广播<消息> -- 广播消息至所有群
-12. 计算<表达式> -- 计算数学表达式
-13. 设置时区<时区名称> -- 设置时区
-14. 切换语言<语言代码> -- 切换语言
-15. 切换币种<币种代码> -- 切换货币单位`);
+2. -100 -- 记录出款 100
+3. 账单 -- 查看当前账单
+4. 汇总 -- 查看账单汇总
+5. 设置汇率6.8 -- 设置汇率为 6.8
+6. 设置费率0.5 -- 设置费率为 0.5
+7. 删除当前数据 -- 清空当前账单
+8. 添加操作员 -- 回复消息以添加操作员
+9. 删除操作员 -- 回复消息以删除操作员
+10. 全局广播<消息> -- 广播消息至所有群
+11. 计算<表达式> -- 计算数学表达式
+12. 设置时区<时区名称> -- 设置时区
+13. 切换语言<语言代码> -- 切换语言（例如 zh-CN 或 en-US）
+14. 切换币种<币种代码> -- 切换货币单位`,
+            'en-US': `Supported commands:
+1. +100 -- Record deposit of 100
+2. -100 -- Record withdrawal of 100
+3. Bill -- View current bill
+4. Summary -- View bill summary
+5. Set exchange rate 6.8 -- Set exchange rate to 6.8
+6. Set fee rate 0.5 -- Set fee rate to 0.5
+7. Clear data -- Clear current bill
+8. Add operator -- Reply to a message to add an operator
+9. Remove operator -- Reply to a message to remove an operator
+10. Global broadcast<message> -- Broadcast a message to all groups
+11. Calculate<expression> -- Calculate a mathematical expression
+12. Set timezone<timezone> -- Set timezone (e.g., Asia/Shanghai)
+13. Switch language<language code> -- Switch language (e.g., zh-CN or en-US)
+14. Switch currency<currency code> -- Switch currency unit`
+        };
+        ctx.reply(messages[language]);
     });
 
     // 记录入款
@@ -57,20 +76,18 @@ let feeRate = 0.5; // 默认费率
         if (!accounts[userId]) accounts[userId] = [];
         const transactionTime = getUserTime(userId);
         accounts[userId].push({ type: '入款', amount, currency, time: transactionTime });
-        const usdtAmount = (amount / exchangeRate).toFixed(2);
-        ctx.reply(`已记录入款：${amount} ${currency} 时间：${transactionTime}\nUSDT：${usdtAmount}`);
+        ctx.reply(`已记录入款：${amount} ${currency} 时间：${transactionTime}`);
     });
 
     // 记录出款
-    bot.hears(/^下发(\d+)/, (ctx) => {
+    bot.hears(/^-(\d+)/, (ctx) => {
         const amount = parseFloat(ctx.match[1]);
         const userId = ctx.from.id;
         const currency = userSettings[userId]?.currency || 'CNY';
         if (!accounts[userId]) accounts[userId] = [];
         const transactionTime = getUserTime(userId);
         accounts[userId].push({ type: '出款', amount, currency, time: transactionTime });
-        const usdtAmount = (amount / exchangeRate).toFixed(2);
-        ctx.reply(`已记录出款：${amount} ${currency} 时间：${transactionTime}\nUSDT：${usdtAmount}`);
+        ctx.reply(`已记录出款：${amount} ${currency} 时间：${transactionTime}`);
     });
 
     // 查看账单
@@ -81,10 +98,10 @@ let feeRate = 0.5; // 默认费率
         }
         const today = moment().format('YYYY/MM/DD');
         const transactions = accounts[userId];
-        const details = transactions.map((entry, index) => `${index + 1}. ${entry.type} ${entry.amount} ${entry.currency} [${entry.time.split(' ')[1]}]`).join('\n');
+        const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalInCNY = transactions.reduce((sum, entry) => entry.type === '入款' ? sum + entry.amount : sum, 0);
         const totalInUSDT = (totalInCNY / exchangeRate).toFixed(2);
-        ctx.reply(`账单日期: ${today}\n入款${transactions.length}笔：\n${details}\nUSDT：${totalInUSDT}`);
+        ctx.reply(`账单日期:${today}\n入款${transactions.length}笔：\n${details}\nUSDT：${totalInUSDT}`);
     });
 
     // 汇总
@@ -195,7 +212,7 @@ let feeRate = 0.5; // 默认费率
         const userId = ctx.from.id;
         if (!userSettings[userId]) userSettings[userId] = {};
         userSettings[userId].language = language;
-        ctx.reply(`语言已切换为：${language}`);
+        ctx.reply(language === 'zh-CN' ? '语言已切换为中文。' : 'Language switched to English.');
     });
 
     // 切换币种
