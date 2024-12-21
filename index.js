@@ -61,49 +61,55 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 11. 直接输入数学表达式 -- 计算数学表达式`);
     });
 
-    // 记录入款
-    bot.hears(/^\+(\d+)/, (ctx) => {
-        if (!hasPermission(ctx, PERMISSION_LEVELS.OPERATOR)) {
-            return ctx.reply('您无权使用此机器人。请联系管理员。');
-        }
-        const amount = parseFloat(ctx.match[1]);
-        const accountId = getAccountId(ctx);
-        const currency = userSettings[accountId]?.currency || 'CNY';
-        if (!accounts[accountId]) accounts[accountId] = [];
-        const transactionTime = getUserTime(accountId);
-        accounts[accountId].push({ type: '入款', amount, currency, time: transactionTime });
+// 记录入款
+bot.hears(/^\+(\d+)/, (ctx) => {
+    if (!isOperator(ctx)) {
+        return ctx.reply('您无权使用此机器人。请联系管理员。');
+    }
+    const amount = parseFloat(ctx.match[1]);
+    const accountId = getAccountId(ctx);
+    const currency = userSettings[accountId]?.currency || 'CNY';
+    if (!accounts[accountId]) accounts[accountId] = [];
+    const transactionTime = getUserTime(accountId);
+    accounts[accountId].push({ type: '入款', amount, currency, time: transactionTime });
 
-        const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
-        const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
-        const depositCount = accounts[accountId].filter(e => e.type === '入款').length;
-        const withdrawalCount = accounts[accountId].filter(e => e.type === '出款').length;
-        const netTotal = totalDeposit - totalWithdrawal;
-        const netInUSDT = (netTotal / exchangeRate).toFixed(2);
+    const totalTransactions = accounts[accountId].length;
+    const transactions = accounts[accountId].slice(-5);
+    const details = transactions
+        .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
+        .join('\n');
+    const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
+    const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+    const netTotal = totalDeposit - totalWithdrawal;
+    const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`记录成功！\n当前净总和：${netTotal} CNY\nUSDT：${netInUSDT}\n入款笔数：${depositCount}，出款笔数：${withdrawalCount}`);
-    });
+    ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款笔数：${accounts[accountId].filter(e => e.type === '入款').length}  出款笔数：${accounts[accountId].filter(e => e.type === '出款').length}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
+});
     
-    // 记录出款
-    bot.hears(/^-(\d+)/, (ctx) => {
-        if (!hasPermission(ctx, PERMISSION_LEVELS.OPERATOR)) {
-            return ctx.reply('您无权使用此机器人。请联系管理员。');
-        }
-        const amount = parseFloat(ctx.match[1]);
-        const accountId = getAccountId(ctx);
-        const currency = userSettings[accountId]?.currency || 'CNY';
-        if (!accounts[accountId]) accounts[accountId] = [];
-        const transactionTime = getUserTime(accountId);
-        accounts[accountId].push({ type: '出款', amount, currency, time: transactionTime });
+// 记录出款
+bot.hears(/^-(\d+)/, (ctx) => {
+    if (!isOperator(ctx)) {
+        return ctx.reply('您无权使用此机器人。请联系管理员。');
+    }
+    const amount = parseFloat(ctx.match[1]);
+    const accountId = getAccountId(ctx);
+    const currency = userSettings[accountId]?.currency || 'CNY';
+    if (!accounts[accountId]) accounts[accountId] = [];
+    const transactionTime = getUserTime(accountId);
+    accounts[accountId].push({ type: '出款', amount, currency, time: transactionTime });
 
-        const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
-        const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
-        const depositCount = accounts[accountId].filter(e => e.type === '入款').length;
-        const withdrawalCount = accounts[accountId].filter(e => e.type === '出款').length;
-        const netTotal = totalDeposit - totalWithdrawal;
-        const netInUSDT = (netTotal / exchangeRate).toFixed(2);
+    const totalTransactions = accounts[accountId].length;
+    const transactions = accounts[accountId].slice(-5);
+    const details = transactions
+        .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
+        .join('\n');
+    const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
+    const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+    const netTotal = totalDeposit - totalWithdrawal;
+    const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`记录成功！\n当前净总和：${netTotal} CNY\nUSDT：${netInUSDT}\n入款笔数：${depositCount}，出款笔数：${withdrawalCount}`);
-    });
+    ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款笔数：${accounts[accountId].filter(e => e.type === '入款').length}  出款笔数：${accounts[accountId].filter(e => e.type === '出款').length}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
+});
     
     // 查看账单
     bot.command('账单', (ctx) => {
