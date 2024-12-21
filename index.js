@@ -15,24 +15,20 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     await client.connect();
     const db = client.db(process.env.MONGODB_DB);
 
-    // 获取用户的当前时间
     const getUserTime = (userId) => {
         const timezone = userSettings[userId]?.timezone || 'UTC';
         return moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
     };
 
-    // 获取账单编号
     const getAccountId = (ctx) => {
         return ctx.chat.type === 'private' ? `用户-${ctx.from.id}` : `群组-${ctx.chat.id}`;
     };
 
-    // 检查是否有权限（支持管理员和动态添加的用户）
     const hasPermission = (ctx) => {
         const accountId = getAccountId(ctx);
         return operators.includes(ctx.from.id.toString()) || userSettings[accountId]?.isAuthorized;
     };
 
-    // 检查是否为操作员
     const isOperator = (ctx) => {
         return operators.includes(ctx.from.id.toString());
     };
@@ -266,7 +262,7 @@ USDT：${netInUSDT}`);
     });
 
     // 数学计算
-    bot.hears(/^[0-9+\-*/().\s]+$/, (ctx) => {
+    bot.hears(/^\d+[+\-*/().\s]*\d+$/, (ctx) => {
         try {
             const result = eval(ctx.message.text);
             ctx.reply(`计算结果：${result}`);
