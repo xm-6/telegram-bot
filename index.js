@@ -45,7 +45,7 @@ let feeRate = 0.5; // 默认费率
 8. 添加操作员 -- 回复消息以添加操作员
 9. 删除操作员 -- 回复消息以删除操作员
 10. 全局广播<消息> -- 广播消息至所有群
-11. 计算<表达式> -- 计算数学表达式
+11. 直接输入数学表达式 -- 计算数学表达式
 12. 设置时区<时区名称> -- 设置时区
 13. 切换语言<语言代码> -- 切换语言（例如 zh-CN 或 en-US）
 14. 切换币种<币种代码> -- 切换货币单位`,
@@ -60,7 +60,7 @@ let feeRate = 0.5; // 默认费率
 8. Add operator -- Reply to a message to add an operator
 9. Remove operator -- Reply to a message to remove an operator
 10. Global broadcast<message> -- Broadcast a message to all groups
-11. Calculate<expression> -- Calculate a mathematical expression
+11. Directly enter a math expression -- Calculate the result
 12. Set timezone<timezone> -- Set timezone (e.g., Asia/Shanghai)
 13. Switch language<language code> -- Switch language (e.g., zh-CN or en-US)
 14. Switch currency<currency code> -- Switch currency unit`
@@ -101,7 +101,7 @@ let feeRate = 0.5; // 默认费率
         const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalInCNY = transactions.reduce((sum, entry) => entry.type === '入款' ? sum + entry.amount : sum, 0);
         const totalInUSDT = (totalInCNY / exchangeRate).toFixed(2);
-        ctx.reply(`账单日期:${today}\n入款${transactions.length}笔：\n${details}\nUSDT：${totalInUSDT}`);
+        ctx.reply(`账单日期:${today}\n入款${transactions.filter(e => e.type === '入款').length}笔：\n${details}\nUSDT：${totalInUSDT}`);
     });
 
     // 汇总
@@ -181,9 +181,9 @@ let feeRate = 0.5; // 默认费率
     });
 
     // 数学计算
-    bot.hears(/^计算(.*)/, (ctx) => {
+    bot.hears(/^[0-9+\-*/().\s]+$/, (ctx) => {
         try {
-            const result = math.evaluate(ctx.match[1]);
+            const result = math.evaluate(ctx.message.text);
             ctx.reply(`计算结果：${result}`);
         } catch {
             ctx.reply('无效的数学表达式。');
