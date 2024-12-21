@@ -124,6 +124,32 @@ ${details}
 USDT：${netInUSDT}`);
         });
 
+        bot.command('账单', (ctx) => {
+    if (!hasPermission(ctx)) {
+        return ctx.reply('您无权使用此功能。请联系管理员。');
+    }
+    const accountId = getAccountId(ctx);
+    if (!accounts[accountId] || accounts[accountId].length === 0) {
+        return ctx.reply('当前没有账单记录。');
+    }
+    const transactions = accounts[accountId].slice(-5);
+    const details = transactions.map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
+    const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
+    const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+    const netTotal = totalDeposit - totalWithdrawal;
+    const netInUSDT = (netTotal / exchangeRate).toFixed(2);
+
+    ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}
+入款笔数：${accounts[accountId].filter(e => e.type === '入款').length}  出款笔数：${accounts[accountId].filter(e => e.type === '出款').length}
+记录：
+${details}
+---------------------------
+总入款：${totalDeposit} CNY
+总出款：${totalWithdrawal} CNY
+净总和：${netTotal} CNY
+USDT：${netInUSDT}`);
+});
+
         // 删除记录
         bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
             if (!hasPermission(ctx)) {
@@ -212,6 +238,7 @@ bot.command('授权用户', (ctx) => {
     } else {
         ctx.reply(`用户 ${targetId} 已经拥有权限。`);
     }
+    console.log(`Current authorized users: ${authorizedUsers}`);
 });
 
         // 数学计算
