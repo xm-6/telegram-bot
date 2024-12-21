@@ -1,25 +1,16 @@
-运行 -- cmd
+# Railway Telegram Bot
 
-清除Webhook设置
+### 功能
+1. 记录入款、出款，查看账单明细和汇总。
+2. 多语言支持（中文和英文）。
+3. 动态设置汇率和手续费率。
+4. 支持数学表达式计算。
+5. 设置用户时区，显示当前时间。
 
-curl -F "url=" https://api.telegram.org/bot1234567890:AAERamDo8a3DziM8P8vwUu-aBKAVh2VMoBU/deleteWebhook
+### 部署步骤
+1. **创建 Railway 项目**：
+   - 添加环境变量：`BOT_TOKEN`、`MONGODB_URI`、`MONGODB_DB`。
 
-重设Webhook
-
-curl -F "url=https://vercel.app" https://api.telegram.org/bot1234567890:AAERamDo8a3DziM8P8vwUu-aBKAVh2VMoBU/setWebhook
-
-浏览器查看
-https://api.telegram.org/bot1234567890:AAERamDo8a3DziM8P8vwUu-aBKAVh2VMoBU/getWebhookInfo
-
-浏览器设置
-https://api.telegram.org/bot1234567890:AAERamDo8a3DziM8P8vwUu-aBKAVh2VMoBU/setWebhook?url=https://vercel.app
-
-
-清除  重设  很重要
-
-.env
-
-BOT_TOKEN：电报机器人api
-OWNER_ID：创建机器人账号用户【ID】
-vercel.app：vercel部署后网址
-（可不上传 部署时设置  部署平台 vercel）
+2. **安装依赖**：
+   ```bash
+   npm install
