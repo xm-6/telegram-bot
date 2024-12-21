@@ -58,9 +58,6 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 })();
 
 
-// 初始化 Bot
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
 // 获取指定时区的当前时间
 const getCurrentTime = (chatId) => {
     const timeZone = userTimeZones[chatId] || 'Asia/Shanghai'; // 默认为上海时区
