@@ -35,10 +35,27 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             return ctx.chat.type === 'private' ? `用户-${ctx.from.id}` : `群组-${ctx.chat.id}`;
         };
 
-        // 检查权限
-        const hasPermission = (ctx) => {
-            return authorizedUsers.includes(ctx.from.id.toString());
-        };
+// 检查权限
+const hasPermission = (ctx) => {
+    return authorizedUsers.includes(ctx.from.id.toString());
+};
+
+// 授权用户命令
+bot.command('授权用户', (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_ID) {
+        return ctx.reply('您无权执行此操作。');
+    }
+    const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
+    if (!targetId) {
+        return ctx.reply('请回复目标用户的消息或提供用户ID以授权。');
+    }
+    if (!authorizedUsers.includes(targetId)) {
+        authorizedUsers.push(targetId);
+        ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
+    } else {
+        ctx.reply(`用户 ${targetId} 已经拥有权限。`);
+    }
+});
 
         // 初始化命令
         bot.start((ctx) => {
