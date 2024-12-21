@@ -6,6 +6,10 @@ const botToken = process.env.BOT_TOKEN;
 const mongoUri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
 
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']); // Google 和 Cloudflare 公共 DNS
+
+
 // 检查是否正确加载环境变量
 if (!botToken) {
     console.error('Error: BOT_TOKEN is not defined!');
