@@ -189,7 +189,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     });
 
     // 数学计算
-    bot.hears(/^[0-9+\-*/().\s]+$/, (ctx) => {
+    bot.hears(/^.*[+\-*/].*$/, (ctx) => {
         try {
             const result = eval(ctx.message.text);
             ctx.reply(`计算结果：${result}`);
