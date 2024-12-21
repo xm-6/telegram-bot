@@ -214,6 +214,9 @@ USDT：${netInUSDT}`);
 
         // 数学计算
         bot.hears(/^[0-9()+\-*/.\s]+$/, (ctx) => {
+            if (!hasPermission(ctx)) {
+                return ctx.reply('您无权使用此功能。请联系管理员。');
+            }
             try {
                 const result = eval(ctx.message.text);
                 ctx.reply(`计算结果：${result}`);
