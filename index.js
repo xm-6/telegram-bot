@@ -40,22 +40,6 @@ const hasPermission = (ctx) => {
     return authorizedUsers.includes(ctx.from.id.toString());
 };
 
-// 授权用户命令
-bot.command('授权用户', (ctx) => {
-    if (ctx.from.id.toString() !== process.env.OWNER_ID) {
-        return ctx.reply('您无权执行此操作。');
-    }
-    const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
-    if (!targetId) {
-        return ctx.reply('请回复目标用户的消息或提供用户ID以授权。');
-    }
-    if (!authorizedUsers.includes(targetId)) {
-        authorizedUsers.push(targetId);
-        ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
-    } else {
-        ctx.reply(`用户 ${targetId} 已经拥有权限。`);
-    }
-});
 
         // 初始化命令
         bot.start((ctx) => {
@@ -212,22 +196,23 @@ USDT：${netInUSDT}`);
             ctx.reply(`时区已设置为：${timezone}`);
         });
 
-        // 授权用户
-        bot.command('授权用户', (ctx) => {
-            if (ctx.from.id.toString() !== process.env.OWNER_ID) {
-                return ctx.reply('您无权执行此操作。');
-            }
-            const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
-            if (!targetId) {
-                return ctx.reply('请回复目标用户的消息或提供用户ID以授权。');
-            }
-            if (!authorizedUsers.includes(targetId)) {
-                authorizedUsers.push(targetId);
-                ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
-            } else {
-                ctx.reply(`用户 ${targetId} 已经拥有权限。`);
-            }
-        });
+bot.command('授权用户', (ctx) => {
+    if (ctx.from.id.toString() !== process.env.OWNER_ID) {
+        return ctx.reply('您无权执行此操作。');
+    }
+    const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
+    if (!targetId) {
+        return ctx.reply('请回复目标用户的消息或提供用户ID以授权。');
+    }
+    console.log(`Authorizing user: ${targetId}`);
+    if (!authorizedUsers.includes(targetId)) {
+        authorizedUsers.push(targetId);
+        console.log(`User ${targetId} added to authorizedUsers`);
+        ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
+    } else {
+        ctx.reply(`用户 ${targetId} 已经拥有权限。`);
+    }
+});
 
         // 数学计算
         bot.hears(/^[0-9()+\-*/.\s]+$/, (ctx) => {
