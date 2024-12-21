@@ -121,27 +121,18 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!isOperator(ctx)) {
             return ctx.reply('您无权执行此操作。');
         }
-        if (ctx.message.reply_to_message) {
-            const newOperator = ctx.message.reply_to_message.from.id.toString();
-            if (!operators.includes(newOperator)) {
-                operators.push(newOperator);
-                ctx.reply('已成功添加操作员。');
+        const username = ctx.message.text.split(' ')[1];
+        if (username && username.startsWith('@')) {
+            if (!operators.includes(username)) {
+                operators.push(username);
+                ctx.reply(`已成功添加操作员：${username}`);
             } else {
                 ctx.reply('该用户已是操作员。');
             }
         } else {
-            const username = ctx.message.text.split(' ')[1];
-            if (username && username.startsWith('@')) {
-                if (!operators.includes(username)) {
-                    operators.push(username);
-                    ctx.reply(`已成功添加操作员：${username}`);
-                } else {
-                    ctx.reply('该用户已是操作员。');
-                }
-            } else {
-                ctx.reply('请回复消息或使用 @用户名 格式指定用户以添加操作员。');
-            }
+            ctx.reply('请使用正确格式，例如：/添加操作员 @用户名');
         }
+        console.log(`当前操作员列表: ${operators}`);
     });
 
     // 删除操作员
@@ -149,27 +140,18 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!isOperator(ctx)) {
             return ctx.reply('您无权执行此操作。');
         }
-        if (ctx.message.reply_to_message) {
-            const operator = ctx.message.reply_to_message.from.id.toString();
-            if (operators.includes(operator)) {
-                operators = operators.filter(op => op !== operator);
-                ctx.reply('已成功删除操作员。');
+        const username = ctx.message.text.split(' ')[1];
+        if (username && username.startsWith('@')) {
+            if (operators.includes(username)) {
+                operators = operators.filter(op => op !== username);
+                ctx.reply(`已成功删除操作员：${username}`);
             } else {
                 ctx.reply('该用户不是操作员。');
             }
         } else {
-            const username = ctx.message.text.split(' ')[1];
-            if (username && username.startsWith('@')) {
-                if (operators.includes(username)) {
-                    operators = operators.filter(op => op !== username);
-                    ctx.reply(`已成功删除操作员：${username}`);
-                } else {
-                    ctx.reply('该用户不是操作员。');
-                }
-            } else {
-                ctx.reply('请回复消息或使用 @用户名 格式指定用户以删除操作员。');
-            }
+            ctx.reply('请使用正确格式，例如：/删除操作员 @用户名');
         }
+        console.log(`当前操作员列表: ${operators}`);
     });
 
         // 添加日志跟踪用于调试
