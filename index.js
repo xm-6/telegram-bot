@@ -117,7 +117,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     });
 
     // 添加操作员
-    bot.command('添加操作员', (ctx) => {
+    bot.command('添加操作员', async (ctx) => {
         if (!isOperator(ctx)) {
             return ctx.reply('您无权执行此操作。');
         }
@@ -140,8 +140,8 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         }
     });
 
-        // 删除操作员
-    bot.command('删除操作员', (ctx) => {
+    // 删除操作员
+    bot.command('删除操作员', async (ctx) => {
         if (!isOperator(ctx)) {
             return ctx.reply('您无权执行此操作。');
         }
