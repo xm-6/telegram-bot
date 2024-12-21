@@ -2,6 +2,29 @@
 const { Telegraf } = require('telegraf');
 const { json } = require('micro');
 require('dotenv').config();
+const botToken = process.env.BOT_TOKEN;
+const mongoUri = process.env.MONGODB_URI;
+const dbName = process.env.MONGODB_DB;
+
+// 检查是否正确加载环境变量
+if (!botToken) {
+    console.error('Error: BOT_TOKEN is not defined!');
+    process.exit(1); // 停止程序运行
+}
+
+if (!mongoUri) {
+    console.error('Error: MONGODB_URI is not defined!');
+    process.exit(1); // 停止程序运行
+}
+
+if (!dbName) {
+    console.error('Error: MONGODB_DB is not defined!');
+    process.exit(1); // 停止程序运行
+}
+
+console.log(`Bot Token: ${botToken}`);
+console.log(`MongoDB URI: ${mongoUri}`);
+console.log(`Database Name: ${dbName}`);
 
 // 初始化 Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
