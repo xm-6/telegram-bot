@@ -3,7 +3,7 @@ import datetime
 import pytz
 from pymongo import MongoClient
 from telegram import Update, ParseMode
-from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from decouple import config
 
 # 获取 Telegram Bot API 令牌和 MongoDB URI
@@ -15,7 +15,7 @@ RESTRICTED_MODE = config('RESTRICTED_MODE', default='1')  # 默认为1，表示�
 ALLOWED_USER_ID = 123456789  # 替换为您的实际用户ID
 
 # 初始化日志记录器
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 初始化 MongoDB 客户端
@@ -33,6 +33,19 @@ def is_user_allowed(user_id):
     if RESTRICTED_MODE == '0':
         return user_id == ALLOWED_USER_ID
     return True
+
+# 处理 /start 命令
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('欢迎使用记账机器人！您可以使用以下指令：\n'
+                              '+<金额> 记录入款\n'
+                              '-<金额> 记录出款\n'
+                              '账单 查看当前账单\n'
+                              '删除 <时间> 删除指定时间的记录\n'
+                              '汇率 <汇率> 设置 USDT 汇率\n'
+                              '币种 <币种> 设置币种\n'
+                              '时区 <时区> 设置时区\n'
+                              '清除 清除当前账单记录\n'
+                              '<表达式> 计算数学表达式')
 
 # 处理入款
 def add_record(update: Update, context: CallbackContext) -> None:
@@ -229,6 +242,7 @@ def main() -> None:
     updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
 
+    dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     updater.start_polling()
