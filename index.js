@@ -69,8 +69,10 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const netTotal = totalDeposit - totalWithdrawal;
+        const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款/出款记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY`);
+        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款笔数：${transactions.filter(e => e.type === '入款').length}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
     });
 
     // 记录出款
@@ -89,8 +91,10 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
+        const netTotal = totalDeposit - totalWithdrawal;
+        const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款/出款记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY`);
+        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n出款笔数：${transactions.filter(e => e.type === '出款').length}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
     });
 
     // 查看账单
@@ -106,9 +110,10 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = transactions.filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = transactions.filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
-        const netInUSDT = ((totalDeposit - totalWithdrawal) / exchangeRate).toFixed(2);
+        const netTotal = totalDeposit - totalWithdrawal;
+        const netInUSDT = (netTotal / exchangeRate).toFixed(2);
 
-        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\nUSDT：${netInUSDT}`);
+        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款笔数：${transactions.filter(e => e.type === '入款').length}\n记录：\n${details}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\n净总和：${netTotal} CNY\nUSDT：${netInUSDT}`);
     });
 
     // 添加操作员
@@ -126,16 +131,16 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             }
         } else {
             const username = ctx.message.text.split(' ')[1];
-            if (username) {
+            if (username && username.startsWith('@')) {
                 operators.push(username);
                 ctx.reply(`已添加操作员：${username}`);
             } else {
-                ctx.reply('请回复消息或指定用户名以添加操作员。');
+                ctx.reply('请回复消息或使用 @用户名 格式指定用户以添加操作员。');
             }
         }
     });
 
-    // 删除操作员
+        // 删除操作员
     bot.command('删除操作员', (ctx) => {
         if (!isOperator(ctx)) {
             return ctx.reply('您无权执行此操作。');
@@ -146,15 +151,15 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             ctx.reply('已删除操作员。');
         } else {
             const username = ctx.message.text.split(' ')[1];
-            if (username) {
+            if (username && username.startsWith('@')) {
                 operators = operators.filter(op => op !== username);
                 ctx.reply(`已删除操作员：${username}`);
             } else {
-                ctx.reply('请回复消息或指定用户名以删除操作员。');
+                ctx.reply('请回复消息或使用 @用户名 格式指定用户以删除操作员。');
             }
         }
     });
-
+    
     // 删除指定记录
     bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
         if (!isOperator(ctx)) {
