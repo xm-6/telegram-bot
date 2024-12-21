@@ -178,6 +178,10 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         return next();
     });
 
+    bot.catch((err, ctx) => {
+    console.error(`错误捕获: ${ctx.updateType}`, err);
+    ctx.reply('发生了错误，请稍后重试。');
+});
     
     // 删除指定记录
     bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
