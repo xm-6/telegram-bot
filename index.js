@@ -98,12 +98,11 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     });
 
     // 查看账单
-    bot.command('账单', (ctx) => {
-        if (!isOperator(ctx)) {
+    bot.command('账单', async (ctx) => {
+        if (!(await isOperator(ctx))) {
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
         const accountId = getAccountId(ctx);
-        console.log(`获取账单: 账户ID ${accountId}`);
         if (!accounts[accountId] || accounts[accountId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
@@ -119,47 +118,44 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 
     // 添加操作员
     bot.command('添加操作员', async (ctx) => {
-        if (!isOperator(ctx)) {
+        if (!(await isOperator(ctx))) {
             return ctx.reply('您无权执行此操作。');
         }
+
         if (ctx.message.reply_to_message) {
-            const newOperator = ctx.message.reply_to_message.from.id.toString();
-            if (!operators.includes(newOperator)) {
-                operators.push(newOperator);
-                ctx.reply('已添加操作员。');
-            } else {
-                ctx.reply('该用户已是操作员。');
+            const newOperatorId = ctx.message.reply_to_message.from.id;
+            try {
+                await ctx.telegram.promoteChatMember(ctx.chat.id, newOperatorId, { can_manage_chat: true });
+                ctx.reply('已成功添加操作员。');
+            } catch (error) {
+                console.error(`添加操作员失败: ${error.message}`);
+                ctx.reply('添加操作员失败，请重试。');
             }
         } else {
-            const username = ctx.message.text.split(' ')[1];
-            if (username && username.startsWith('@')) {
-                operators.push(username);
-                ctx.reply(`已添加操作员：${username}`);
-            } else {
-                ctx.reply('请回复消息或使用 @用户名 格式指定用户以添加操作员。');
-            }
+            ctx.reply('请回复一条消息以指定要添加的操作员。');
         }
     });
 
     // 删除操作员
     bot.command('删除操作员', async (ctx) => {
-        if (!isOperator(ctx)) {
+        if (!(await isOperator(ctx))) {
             return ctx.reply('您无权执行此操作。');
         }
+
         if (ctx.message.reply_to_message) {
-            const operator = ctx.message.reply_to_message.from.id.toString();
-            operators = operators.filter(op => op !== operator);
-            ctx.reply('已删除操作员。');
-        } else {
-            const username = ctx.message.text.split(' ')[1];
-            if (username && username.startsWith('@')) {
-                operators = operators.filter(op => op !== username);
-                ctx.reply(`已删除操作员：${username}`);
-            } else {
-                ctx.reply('请回复消息或使用 @用户名 格式指定用户以删除操作员。');
+            const operatorId = ctx.message.reply_to_message.from.id;
+            try {
+                await ctx.telegram.restrictChatMember(ctx.chat.id, operatorId, { can_manage_chat: false });
+                ctx.reply('已成功删除操作员。');
+            } catch (error) {
+                console.error(`删除操作员失败: ${error.message}`);
+                ctx.reply('删除操作员失败，请重试。');
             }
+        } else {
+            ctx.reply('请回复一条消息以指定要删除的操作员。');
         }
     });
+
     
     // 删除指定记录
     bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
