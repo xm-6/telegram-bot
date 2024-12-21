@@ -73,7 +73,14 @@ def add_record(update: Update, context: CallbackContext) -> None:
         "timestamp": timestamp
     }
     collection.insert_one(record)
-    update.message.reply_text(f'记录入款：{amount} {currency} (汇率：{exchange_rate})')
+
+    # Fetch the last 5 records
+    recent_records = collection.find({"user_id": user_id, "chat_id": chat_id, "record_type": "+"}).sort("_id", -1).limit(5)
+    response = '记录：\n'
+    for rec in recent_records:
+        response += f"+{rec['amount']} {rec['currency']}[{rec['timestamp'].split(' ')[1]}]\n"
+
+    update.message.reply_text(f'记录入款：{amount} {currency} (汇率：{exchange_rate})\n{response}')
 
 # 处理出款
 def subtract_record(update: Update, context: CallbackContext) -> None:
@@ -101,7 +108,14 @@ def subtract_record(update: Update, context: CallbackContext) -> None:
         "timestamp": timestamp
     }
     collection.insert_one(record)
-    update.message.reply_text(f'记录出款：{amount} {currency} (汇率：{exchange_rate})')
+
+    # Fetch the last 5 records
+    recent_records = collection.find({"user_id": user_id, "chat_id": chat_id, "record_type": "-"}).sort("_id", -1).limit(5)
+    response = '记录：\n'
+    for rec in recent_records:
+        response += f"-{rec['amount']} {rec['currency']}[{rec['timestamp'].split(' ')[1]}]\n"
+
+    update.message.reply_text(f'记录出款：{amount} {currency} (汇率：{exchange_rate})\n{response}')
 
 # 查看账单
 def view_records(update: Update, context: CallbackContext) -> None:
@@ -124,7 +138,7 @@ def view_records(update: Update, context: CallbackContext) -> None:
         else:
             total_expense += record['amount']
             expense_count += 1
-        response += f"{record['timestamp']} - {record['amount']} {record['currency']} (汇率：{record['exchange_rate']})\n"
+        response += f"{record['timestamp']} - {record['amount']} {record['currency']}[{record['timestamp'].split(' ')[1]}]\n"
 
     net_total = total_income - total_expense
     usdt_income = total_income / user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
@@ -132,9 +146,10 @@ def view_records(update: Update, context: CallbackContext) -> None:
     usdt_net_total = net_total / user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
 
     response += '---------------------------\n'
-    response += f'总入款：{total_income} {default_currency} ({usdt_income} USDT)\n'
-    response += f'总出款：{total_expense} {default_currency} ({usdt_expense} USDT)\n'
-    response += f'净总和：{net_total} {default_currency} ({usdt_net_total} USDT)\n'
+    response += f'总入款：{total_income} {default_currency}\n'
+    response += f'总出款：{total_expense} {default_currency}\n'
+    response += f'净总和：{net_total} {default_currency}\n'
+    response += f'USDT：{usdt_net_total}\n'
     response += f'入款笔数：{income_count} 出款笔数：{expense_count}'
 
     update.message.reply_text(response)
