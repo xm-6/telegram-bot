@@ -1,4 +1,4 @@
-// Import dependencies
+// 引入依赖
 const { Telegraf } = require('telegraf');
 const { MongoClient } = require('mongodb');
 const math = require('mathjs');
@@ -7,146 +7,201 @@ require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-let accounts = {}; // Store account data for each chat
-let userTimeZones = {}; // Store timezone settings per user
-let userLanguages = {}; // Store language settings per user
-let exchangeRate = 6.8; // Default exchange rate
-let fees = 0.0; // Default fees
-let operators = []; // List of operators
+// 数据存储
+const accounts = {}; // 每个用户的账单记录
+const userSettings = {}; // 包括时区、语言和货币等信息
+let operators = []; // 操作员列表
+let exchangeRate = 6.8; // 默认汇率
+let feeRate = 0.5; // 默认费率
 
 (async () => {
-    const mongoUri = process.env.MONGODB_URI;
-    const dbName = process.env.MONGODB_DB;
+    const client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    const db = client.db(process.env.MONGODB_DB);
 
-    const client = new MongoClient(mongoUri);
+    // 获取用户的当前时间
+    const getUserTime = (userId) => {
+        const timezone = userSettings[userId]?.timezone || 'UTC';
+        return moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+    };
 
-    try {
-        console.log('Connecting to MongoDB...');
-        await client.connect();
-        console.log('Connected to MongoDB');
-        const db = client.db(dbName);
-        console.log(`Using database: ${db.databaseName}`);
+    // 初始化命令
+    bot.start((ctx) => {
+        ctx.reply('欢迎使用记账机器人！输入 /help 查看所有指令。');
+    });
 
-        // Initialize commands
-        bot.command('start', (ctx) => {
-            ctx.reply('Hello! The bot is running and connected to MongoDB.');
-        });
+    bot.command('help', (ctx) => {
+        ctx.reply(`支持的指令：
+1. +100 -- 记录入款 100
+2. -100 -- 记录入款 -100
+3. 下发100 -- 记录出款 100
+4. 账单 -- 查看当前账单
+5. 汇总 -- 查看账单汇总
+6. 设置汇率6.8 -- 设置汇率为 6.8
+7. 设置费率0.5 -- 设置费率为 0.5
+8. 删除当前数据 -- 清空当前账单
+9. 添加操作员 -- 回复消息以添加操作员
+10. 删除操作员 -- 回复消息以删除操作员
+11. 全局广播<消息> -- 广播消息至所有群
+12. 计算<表达式> -- 计算数学表达式
+13. 设置时区<时区名称> -- 设置时区
+14. 切换语言<语言代码> -- 切换语言
+15. 切换币种<币种代码> -- 切换货币单位`);
+    });
 
-        bot.command('help', (ctx) => {
-            const chatId = ctx.chat.id;
-            const language = userLanguages[chatId] || 'zh-CN';
-            const helpMessages = {
-                'zh-CN': `帮助信息：\n/start - 启动机器人\n/help - 显示帮助\n+100 - 记录入款100 CNY\n账单 - 查看账单\n汇总 - 查看账单汇总\n设置汇率 <值> - 设置汇率\n设置费率 <值> - 设置费率\n计算 <表达式> - 计算数学表达式\n设置时区 <时区名> - 设置用户时区`,
-                'en-US': `Help Info:\n/start - Start the bot\n/help - Show help\n+100 - Record deposit 100 CNY\nBill - View bill\nSummary - View summary\nSetRate <value> - Set exchange rate\nSetFee <value> - Set fees\nCalculate <expression> - Calculate a math expression\nSetTimezone <name> - Set user timezone`
-            };
-            ctx.reply(helpMessages[language]);
-        });
+    // 记录入款
+    bot.hears(/^\+(\d+)/, (ctx) => {
+        const amount = parseFloat(ctx.match[1]);
+        const userId = ctx.from.id;
+        const currency = userSettings[userId]?.currency || 'CNY';
+        if (!accounts[userId]) accounts[userId] = [];
+        accounts[userId].push({ type: '入款', amount, currency, time: getUserTime(userId) });
+        ctx.reply(`已记录入款：${amount} ${currency} 时间：${getUserTime(userId)}`);
+    });
 
-        // Deposit handling
-        bot.hears(/^\+(\d+)(u?)$/, (ctx) => {
-            const amount = parseFloat(ctx.match[1]);
-            const currency = ctx.match[2] === 'u' ? 'USDT' : 'CNY';
-            const chatId = ctx.chat.id;
+    // 记录出款
+    bot.hears(/^下发(\d+)/, (ctx) => {
+        const amount = parseFloat(ctx.match[1]);
+        const userId = ctx.from.id;
+        const currency = userSettings[userId]?.currency || 'CNY';
+        if (!accounts[userId]) accounts[userId] = [];
+        accounts[userId].push({ type: '出款', amount, currency, time: getUserTime(userId) });
+        ctx.reply(`已记录出款：${amount} ${currency} 时间：${getUserTime(userId)}`);
+    });
 
-            if (!accounts[chatId]) {
-                accounts[chatId] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
+    // 查看账单
+    bot.command('账单', (ctx) => {
+        const userId = ctx.from.id;
+        if (!accounts[userId] || accounts[userId].length === 0) {
+            return ctx.reply('当前没有账单记录。');
+        }
+        const details = accounts[userId].map((entry, index) => `${index + 1}. ${entry.type} ${entry.amount} ${entry.currency} 时间：${entry.time}`).join('\n');
+        ctx.reply(`账单记录：\n${details}`);
+    });
+
+    // 汇总
+    bot.command('汇总', (ctx) => {
+        const userId = ctx.from.id;
+        if (!accounts[userId] || accounts[userId].length === 0) {
+            return ctx.reply('当前没有账单记录。');
+        }
+        const total = accounts[userId].reduce((acc, entry) => {
+            if (entry.type === '入款') acc.deposit += entry.amount;
+            if (entry.type === '出款') acc.withdrawal += entry.amount;
+            return acc;
+        }, { deposit: 0, withdrawal: 0 });
+        ctx.reply(`汇总：\n总入款：${total.deposit} ${userSettings[userId]?.currency || 'CNY'}\n总出款：${total.withdrawal} ${userSettings[userId]?.currency || 'CNY'}\n净收入：${total.deposit - total.withdrawal} ${userSettings[userId]?.currency || 'CNY'}`);
+    });
+
+    // 设置汇率
+    bot.hears(/^设置汇率(\d+(\.\d+)?)/, (ctx) => {
+        exchangeRate = parseFloat(ctx.match[1]);
+        ctx.reply(`汇率已设置为：${exchangeRate}`);
+    });
+
+    // 设置费率
+    bot.hears(/^设置费率(\d+(\.\d+)?)/, (ctx) => {
+        feeRate = parseFloat(ctx.match[1]);
+        ctx.reply(`费率已设置为：${feeRate}`);
+    });
+
+    // 删除当前数据
+    bot.command('删除当前数据', (ctx) => {
+        const userId = ctx.from.id;
+        accounts[userId] = [];
+        ctx.reply('当前账单数据已清空。');
+    });
+
+    // 添加操作员
+    bot.command('添加操作员', (ctx) => {
+        if (ctx.message.reply_to_message) {
+            const newOperator = ctx.message.reply_to_message.from.id;
+            if (!operators.includes(newOperator)) {
+                operators.push(newOperator);
+                ctx.reply('已添加操作员。');
+            } else {
+                ctx.reply('该用户已是操作员。');
             }
+        } else {
+            ctx.reply('请回复一条消息以添加操作员。');
+        }
+    });
 
-            accounts[chatId].transactions.push({ type: 'deposit', amount, currency, time: moment().format() });
-            accounts[chatId].totalDeposit += amount;
+    // 删除操作员
+    bot.command('删除操作员', (ctx) => {
+        if (ctx.message.reply_to_message) {
+            const operator = ctx.message.reply_to_message.from.id;
+            operators = operators.filter(op => op !== operator);
+            ctx.reply('已删除操作员。');
+        } else {
+            ctx.reply('请回复一条消息以删除操作员。');
+        }
+    });
 
-            ctx.reply(`Recorded deposit: ${amount} ${currency}`);
-        });
-
-        // Withdrawal handling
-        bot.hears(/^下拨(\d+)(u?)$/, (ctx) => {
-            const amount = parseFloat(ctx.match[1]);
-            const currency = ctx.match[2] === 'u' ? 'USDT' : 'CNY';
-            const chatId = ctx.chat.id;
-
-            if (!accounts[chatId]) {
-                accounts[chatId] = { transactions: [], totalDeposit: 0, totalWithdrawal: 0 };
+    // 全局广播
+    bot.command('全局广播', (ctx) => {
+        if (ctx.from.id.toString() === process.env.OWNER_ID) {
+            const message = ctx.message.text.split(' ').slice(1).join(' ');
+            if (message) {
+                operators.forEach(op => bot.telegram.sendMessage(op, message));
+                ctx.reply('广播消息已发送。');
+            } else {
+                ctx.reply('请提供广播消息内容。');
             }
+        } else {
+            ctx.reply('无权限执行此操作。');
+        }
+    });
 
-            accounts[chatId].transactions.push({ type: 'withdrawal', amount, currency, time: moment().format() });
-            accounts[chatId].totalWithdrawal += amount;
+    // 数学计算
+    bot.hears(/^计算(.*)/, (ctx) => {
+        try {
+            const result = math.evaluate(ctx.match[1]);
+            ctx.reply(`计算结果：${result}`);
+        } catch {
+            ctx.reply('无效的数学表达式。');
+        }
+    });
 
-            ctx.reply(`Recorded withdrawal: ${amount} ${currency}`);
-        });
+    // 设置时区
+    bot.hears(/^设置时区 (.+)/, (ctx) => {
+        const timezone = ctx.match[1];
+        if (!moment.tz.zone(timezone)) {
+            return ctx.reply('无效的时区名称。');
+        }
+        const userId = ctx.from.id;
+        if (!userSettings[userId]) userSettings[userId] = {};
+        userSettings[userId].timezone = timezone;
+        ctx.reply(`时区已设置为：${timezone}`);
+    });
 
-        // Bill summary
-        bot.hears(/账单|Bill/, (ctx) => {
-            const chatId = ctx.chat.id;
-            if (!accounts[chatId] || accounts[chatId].transactions.length === 0) {
-                return ctx.reply('No records found.');
-            }
+    // 切换语言
+    bot.hears(/^切换语言 (.+)/, (ctx) => {
+        const language = ctx.match[1];
+        const supportedLanguages = ['zh-CN', 'en-US'];
+        if (!supportedLanguages.includes(language)) {
+            return ctx.reply('不支持的语言。');
+        }
+        const userId = ctx.from.id;
+        if (!userSettings[userId]) userSettings[userId] = {};
+        userSettings[userId].language = language;
+        ctx.reply(`语言已切换为：${language}`);
+    });
 
-            const details = accounts[chatId].transactions.map((t, i) => `${i + 1}. ${t.type} ${t.amount} ${t.currency} at ${t.time}`).join('\n');
-            ctx.reply(`Bill details:\n${details}`);
-        });
+    // 切换币种
+    bot.hears(/^切换币种 (.+)/, (ctx) => {
+        const currency = ctx.match[1];
+        const supportedCurrencies = ['CNY', 'USD', 'EUR', 'JPY'];
+        if (!supportedCurrencies.includes(currency)) {
+            return ctx.reply('不支持的币种。支持的币种有：CNY, USD, EUR, JPY');
+        }
+        const userId = ctx.from.id;
+        if (!userSettings[userId]) userSettings[userId] = {};
+        userSettings[userId].currency = currency;
+        ctx.reply(`币种已切换为：${currency}`);
+    });
 
-        // Summary
-        bot.hears(/汇总|Summary/, (ctx) => {
-            const chatId = ctx.chat.id;
-            if (!accounts[chatId]) {
-                return ctx.reply('No data available.');
-            }
-
-            const { totalDeposit, totalWithdrawal } = accounts[chatId];
-            ctx.reply(`Summary:\nTotal Deposit: ${totalDeposit} CNY\nTotal Withdrawal: ${totalWithdrawal} CNY\nNet Balance: ${totalDeposit - totalWithdrawal} CNY`);
-        });
-
-        // Set exchange rate
-        bot.hears(/^设置汇率 (\d+(\.\d+)?)$/, (ctx) => {
-            exchangeRate = parseFloat(ctx.match[1]);
-            ctx.reply(`Exchange rate set to: ${exchangeRate}`);
-        });
-
-        // Set fees
-        bot.hears(/^设置费率 (\d+(\.\d+)?)$/, (ctx) => {
-            fees = parseFloat(ctx.match[1]);
-            ctx.reply(`Fee rate set to: ${fees}`);
-        });
-
-        // Set timezone
-        bot.command('设置时区', (ctx) => {
-            const timezone = ctx.message.text.split(' ')[1];
-            if (!moment.tz.zone(timezone)) {
-                return ctx.reply('Invalid timezone. Example: Asia/Shanghai');
-            }
-
-            const chatId = ctx.chat.id;
-            userTimeZones[chatId] = timezone;
-            ctx.reply(`Timezone set to: ${timezone}`);
-        });
-
-        // Calculate expression
-        bot.command('计算', (ctx) => {
-            const expression = ctx.message.text.split(' ').slice(1).join(' ');
-            try {
-                const result = math.evaluate(expression);
-                ctx.reply(`Result: ${result}`);
-            } catch (error) {
-                ctx.reply('Invalid expression. Example: /计算 5+3*2');
-            }
-        });
-
-        bot.launch();
-        console.log('Bot launched successfully.');
-
-        process.on('SIGINT', () => {
-            bot.stop('SIGINT');
-            client.close();
-            console.log('Bot stopped and database connection closed.');
-        });
-
-        process.on('SIGTERM', () => {
-            bot.stop('SIGTERM');
-            client.close();
-            console.log('Bot stopped and database connection closed.');
-        });
-    } catch (err) {
-        console.error('Failed to connect to MongoDB:', err);
-        process.exit(1);
-    }
+    // 启动 bot
+    bot.launch();
+    console.log('Telegram bot 已启动');
 })();
