@@ -52,7 +52,8 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 8. 授权用户 -- 回复消息或指定用户ID授权使用机器人
 9. 添加操作员 -- 添加管理员权限
 10. 删除操作员 -- 删除管理员权限
-11. 数学计算 -- 输入数学表达式直接计算结果`);
+11. 数学计算 -- 输入数学表达式直接计算结果
+12. 清除账单 -- 清除所有账单记录`);
     });
 
     // 记录入款
@@ -160,6 +161,19 @@ USDT：${netInUSDT}`);
         } else {
             ctx.reply('未找到对应时间的记录。');
         }
+    });
+
+    // 清除所有账单
+    bot.command('清除账单', (ctx) => {
+        if (!isOperator(ctx)) {
+            return ctx.reply('您无权使用此功能。请联系管理员。');
+        }
+        const accountId = getAccountId(ctx);
+        if (!accounts[accountId]) {
+            return ctx.reply('当前没有账单记录。');
+        }
+        accounts[accountId] = [];
+        ctx.reply('所有账单记录已清除。');
     });
 
     // 设置 USDT 汇率
