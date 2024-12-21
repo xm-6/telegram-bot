@@ -197,7 +197,7 @@ USDT：${netInUSDT}`);
 
         // 授权用户
         bot.command('授权用户', (ctx) => {
-            if (!hasPermission(ctx)) {
+            if (ctx.from.id.toString() !== process.env.OWNER_ID) {
                 return ctx.reply('您无权执行此操作。');
             }
             const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
@@ -206,8 +206,10 @@ USDT：${netInUSDT}`);
             }
             if (!authorizedUsers.includes(targetId)) {
                 authorizedUsers.push(targetId);
+                ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
+            } else {
+                ctx.reply(`用户 ${targetId} 已经拥有权限。`);
             }
-            ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
         });
 
         // 数学计算
