@@ -118,15 +118,16 @@ USDT：${netInUSDT}`);
 
     // 查看账单
     bot.command('账单', (ctx) => {
+        if (!hasPermission(ctx)) {
+            return ctx.reply('您无权使用此功能。请联系管理员。');
+        }
         const accountId = getAccountId(ctx);
         if (!accounts[accountId] || accounts[accountId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
 
         const transactions = accounts[accountId];
-        const details = transactions
-            .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
-            .join('\n');
+        const details = transactions.map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = transactions.filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = transactions.filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
         const netTotal = totalDeposit - totalWithdrawal;
@@ -141,6 +142,7 @@ ${details}
 总出款：${totalWithdrawal} CNY
 净总和：${netTotal} CNY
 USDT：${netInUSDT}`);
+    });
 
     // 删除记录
     bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
@@ -161,17 +163,16 @@ USDT：${netInUSDT}`);
         }
     });
 
-    // 清除账单
+    // 清除所有账单
     bot.command('清除账单', (ctx) => {
         if (!isOperator(ctx)) {
-            return ctx.reply('您无权执行此操作，请联系管理员。');
+            return ctx.reply('您无权使用此功能。请联系管理员。');
         }
         const accountId = getAccountId(ctx);
         if (!accounts[accountId]) {
             return ctx.reply('当前没有账单记录。');
         }
-        accounts[accountId] = []; // 清除账单记录
-        console.log(`清空账单记录: ${accountId}`);
+        accounts[accountId] = [];
         ctx.reply('所有账单记录已清除。');
     });
 
@@ -233,35 +234,47 @@ USDT：${netInUSDT}`);
     // 添加操作员
     bot.command('添加操作员', (ctx) => {
         if (!isOperator(ctx)) {
-            return ctx.reply('您无权执行此操作，请联系管理员。');
+            return ctx.reply('您无权执行此操作。');
         }
-        const targetId = ctx.message.reply_to_message?.from.id || ctx.message.text.split(' ')[1];
-        if (!targetId) {
-            return ctx.reply('请回复目标用户的消息或提供用户ID以添加操作员。');
-        }
-        if (!operators.includes(targetId)) {
-            operators.push(targetId); // 添加到操作员列表
-            console.log(`当前操作员列表: ${operators}`);
-            ctx.reply(`已成功添加操作员：${targetId}`);
+        if (ctx.message.reply_to_message) {
+            const newOperator = ctx.message.reply_to_message.from.id.toString();
+            if (!operators.includes(newOperator)) {
+                operators.push(newOperator);
+                ctx.reply('已添加操作员。');
+            } else {
+                ctx.reply('该用户已是操作员。');
+            }
         } else {
-            ctx.reply('该用户已是操作员。');
+            const username = ctx.message.text.split(' ')[1];
+            if (username && username.startsWith('@')) {
+                operators.push(username);
+                ctx.reply(`已添加操作员：${username}`);
+            } else {
+                ctx.reply('请回复消息或使用 @用户名 格式指定用户以添加操作员。');
+            }
         }
     });
 
     // 删除操作员
     bot.command('删除操作员', (ctx) => {
         if (!isOperator(ctx)) {
-            return ctx.reply('您无权执行此操作，请联系管理员。');
+            return ctx.reply('您无权执行此操作。');
         }
-        const targetId = ctx.message.reply_to_message?.from.id || ctx.message.text.split(' ')[1];
-        if (!targetId) {
-            return ctx.reply('请回复目标用户的消息或提供用户ID以删除操作员。');
+        if (ctx.message.reply_to_message) {
+            const operator = ctx.message.reply_to_message.from.id.toString();
+            operators = operators.filter(op => op !== operator);
+            ctx.reply('已删除操作员。');
+        } else {
+            const username = ctx.message.text.split(' ')[1];
+            if (username && username.startsWith('@')) {
+                operators = operators.filter(op => op !== username);
+                ctx.reply(`已删除操作员：${username}`);
+            } else {
+                ctx.reply('请回复消息或使用 @用户名 格式指定用户以删除操作员。');
+            }
         }
-        operators = operators.filter(op => op !== targetId);
-        console.log(`当前操作员列表: ${operators}`);
-        ctx.reply(`已成功删除操作员：${targetId}`);
     });
-    
+
     // 数学计算
     bot.hears(/^\d+[+\-*/().\s]*\d+$/, (ctx) => {
         try {
