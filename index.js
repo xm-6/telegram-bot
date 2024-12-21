@@ -16,19 +16,28 @@ const getCurrentTime = (chatId) => {
 };
 console.log('Bot Token:', process.env.BOT_TOKEN);
 
+
 const { MongoClient } = require('mongodb');
+
+// 从环境变量加载
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    console.error("MONGODB_URI is not defined!");
+    process.exit(1);
+}
+
 let db;
+const client = new MongoClient(uri);
 
-
-// 初始化 MongoDB 连接
-const client = new MongoClient(process.env.MONGODB_URI);
 (async () => {
     try {
         await client.connect();
         console.log("Connected to MongoDB");
-        db = client.db(process.env.MONGODB_DB);
+        db = client.db(process.env.MONGODB_DB || 'test'); // 使用默认数据库 'test'
+        console.log(`Using database: ${db.databaseName}`);
     } catch (error) {
-        console.error("MongoDB connection failed:", error);
+        console.error('MongoDB connection error:', error);
+        process.exit(1);
     }
 })();
 
