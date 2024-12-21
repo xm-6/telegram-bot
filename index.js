@@ -218,7 +218,8 @@ USDT：${netInUSDT}`);
                 return ctx.reply('您无权使用此功能。请联系管理员。');
             }
             try {
-                const result = eval(ctx.message.text);
+                const expression = ctx.message.text.replace(/[^-()\d/*+.]/g, ''); // 防止代码注入
+                const result = eval(expression);
                 ctx.reply(`计算结果：${result}`);
             } catch {
                 ctx.reply('无效的数学表达式。');
