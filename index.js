@@ -55,8 +55,10 @@ let feeRate = 0.5; // 默认费率
         const userId = ctx.from.id;
         const currency = userSettings[userId]?.currency || 'CNY';
         if (!accounts[userId]) accounts[userId] = [];
-        accounts[userId].push({ type: '入款', amount, currency, time: getUserTime(userId) });
-        ctx.reply(`已记录入款：${amount} ${currency} 时间：${getUserTime(userId)}`);
+        const transactionTime = getUserTime(userId);
+        accounts[userId].push({ type: '入款', amount, currency, time: transactionTime });
+        const usdtAmount = (amount / exchangeRate).toFixed(2);
+        ctx.reply(`已记录入款：${amount} ${currency} 时间：${transactionTime}\nUSDT：${usdtAmount}`);
     });
 
     // 记录出款
@@ -65,8 +67,10 @@ let feeRate = 0.5; // 默认费率
         const userId = ctx.from.id;
         const currency = userSettings[userId]?.currency || 'CNY';
         if (!accounts[userId]) accounts[userId] = [];
-        accounts[userId].push({ type: '出款', amount, currency, time: getUserTime(userId) });
-        ctx.reply(`已记录出款：${amount} ${currency} 时间：${getUserTime(userId)}`);
+        const transactionTime = getUserTime(userId);
+        accounts[userId].push({ type: '出款', amount, currency, time: transactionTime });
+        const usdtAmount = (amount / exchangeRate).toFixed(2);
+        ctx.reply(`已记录出款：${amount} ${currency} 时间：${transactionTime}\nUSDT：${usdtAmount}`);
     });
 
     // 查看账单
@@ -75,8 +79,12 @@ let feeRate = 0.5; // 默认费率
         if (!accounts[userId] || accounts[userId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
-        const details = accounts[userId].map((entry, index) => `${index + 1}. ${entry.type} ${entry.amount} ${entry.currency} 时间：${entry.time}`).join('\n');
-        ctx.reply(`账单记录：\n${details}`);
+        const today = moment().format('YYYY/MM/DD');
+        const transactions = accounts[userId];
+        const details = transactions.map((entry, index) => `${index + 1}. ${entry.type} ${entry.amount} ${entry.currency} [${entry.time.split(' ')[1]}]`).join('\n');
+        const totalInCNY = transactions.reduce((sum, entry) => entry.type === '入款' ? sum + entry.amount : sum, 0);
+        const totalInUSDT = (totalInCNY / exchangeRate).toFixed(2);
+        ctx.reply(`账单日期: ${today}\n入款${transactions.length}笔：\n${details}\nUSDT：${totalInUSDT}`);
     });
 
     // 汇总
@@ -90,7 +98,9 @@ let feeRate = 0.5; // 默认费率
             if (entry.type === '出款') acc.withdrawal += entry.amount;
             return acc;
         }, { deposit: 0, withdrawal: 0 });
-        ctx.reply(`汇总：\n总入款：${total.deposit} ${userSettings[userId]?.currency || 'CNY'}\n总出款：${total.withdrawal} ${userSettings[userId]?.currency || 'CNY'}\n净收入：${total.deposit - total.withdrawal} ${userSettings[userId]?.currency || 'CNY'}`);
+        const netInCNY = total.deposit - total.withdrawal;
+        const netInUSDT = (netInCNY / exchangeRate).toFixed(2);
+        ctx.reply(`汇总：\n总入款：${total.deposit} CNY\n总出款：${total.withdrawal} CNY\n净收入：${netInCNY} CNY\nUSDT：${netInUSDT}`);
     });
 
     // 设置汇率
