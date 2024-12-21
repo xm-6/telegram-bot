@@ -59,7 +59,7 @@ def add_record(update: Update, context: CallbackContext) -> None:
     except (IndexError, ValueError):
         update.message.reply_text('请提供一个有效的金额。')
         return
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now(pytz.timezone(user_settings.get(user_id, {}).get('timezone', 'UTC'))).strftime('%Y-%m-%d %H:%M:%S')
     currency = user_settings.get(user_id, {}).get('currency', default_currency)
     exchange_rate = user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
 
@@ -87,7 +87,7 @@ def subtract_record(update: Update, context: CallbackContext) -> None:
     except (IndexError, ValueError):
         update.message.reply_text('请提供一个有效的金额。')
         return
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now(pytz.timezone(user_settings.get(user_id, {}).get('timezone', 'UTC'))).strftime('%Y-%m-%d %H:%M:%S')
     currency = user_settings.get(user_id, {}).get('currency', default_currency)
     exchange_rate = user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
 
@@ -110,10 +110,33 @@ def view_records(update: Update, context: CallbackContext) -> None:
     if not is_user_allowed(user_id):
         update.message.reply_text('您没有权限使用此机器人。')
         return
+
     records = collection.find({"user_id": user_id, "chat_id": chat_id})
+    total_income = 0
+    total_expense = 0
     response = '账单：\n'
+    income_count = 0
+    expense_count = 0
     for record in records:
+        if record['record_type'] == '+':
+            total_income += record['amount']
+            income_count += 1
+        else:
+            total_expense += record['amount']
+            expense_count += 1
         response += f"{record['timestamp']} - {record['amount']} {record['currency']} (汇率：{record['exchange_rate']})\n"
+
+    net_total = total_income - total_expense
+    usdt_income = total_income / user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
+    usdt_expense = total_expense / user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
+    usdt_net_total = net_total / user_settings.get(user_id, {}).get('exchange_rate', default_exchange_rate)
+
+    response += '---------------------------\n'
+    response += f'总入款：{total_income} {default_currency} ({usdt_income} USDT)\n'
+    response += f'总出款：{total_expense} {default_currency} ({usdt_expense} USDT)\n'
+    response += f'净总和：{net_total} {default_currency} ({usdt_net_total} USDT)\n'
+    response += f'入款笔数：{income_count} 出款笔数：{expense_count}'
+
     update.message.reply_text(response)
 
 # 删除记录
