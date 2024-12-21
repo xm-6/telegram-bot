@@ -7,7 +7,7 @@ require('dotenv').config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // 数据存储
-const accounts = {}; // 每个用户的账单记录
+const accounts = {}; // 每个用户或群组的账单记录
 const userSettings = {}; // 包括时区和货币等信息
 let operators = [process.env.OWNER_ID]; // 默认仅 OWNER_ID 是操作员
 let exchangeRate = 7.1; // 默认 USDT 汇率
@@ -21,6 +21,11 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     const getUserTime = (userId) => {
         const timezone = userSettings[userId]?.timezone || 'UTC';
         return moment().tz(timezone).format('YYYY-MM-DD HH:mm:ss');
+    };
+
+    // 获取账单编号
+    const getAccountId = (ctx) => {
+        return ctx.chat.type === 'private' ? `用户-${ctx.from.id}` : `群组-${ctx.chat.id}`;
     };
 
     // 检查是否为操作员
@@ -37,7 +42,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 2. -100 -- 记录出款 100
 3. 账单 -- 查看当前账单和汇总
 4. 删除 <时间> -- 删除指定时间的记录（例如 删除 11:20:23）
-5. 设置USDT汇率：<汇率> -- 设置 USDT 汇率（例如 设置USDT汇率：7.1）
+5. 设置USDT汇率 <汇率> -- 设置 USDT 汇率（例如 设置USDT汇率 10.6）
 6. 切换币种 <币种> -- 切换货币单位（支持：CNY, USD, EUR, JPY）
 7. 设置时区 <时区> -- 设置时区（支持：UTC, Asia/Shanghai, Europe/London, etc.）
 8. 添加操作员 -- 回复消息或指定用户名以添加操作员
@@ -51,13 +56,13 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
         const amount = parseFloat(ctx.match[1]);
-        const userId = ctx.from.id;
-        const currency = userSettings[userId]?.currency || 'CNY';
-        if (!accounts[userId]) accounts[userId] = [];
-        const transactionTime = getUserTime(userId);
-        accounts[userId].push({ type: '入款', amount, currency, time: transactionTime });
+        const accountId = getAccountId(ctx);
+        const currency = userSettings[accountId]?.currency || 'CNY';
+        if (!accounts[accountId]) accounts[accountId] = [];
+        const transactionTime = getUserTime(accountId);
+        accounts[accountId].push({ type: '入款', amount, currency, time: transactionTime });
 
-        const transactions = accounts[userId].filter(e => e.type === '入款');
+        const transactions = accounts[accountId].filter(e => e.type === '入款').slice(-5);
         const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalInUSDT = (transactions.reduce((sum, entry) => sum + entry.amount, 0) / exchangeRate).toFixed(2);
 
@@ -70,13 +75,17 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
         const amount = parseFloat(ctx.match[1]);
-        const userId = ctx.from.id;
-        const currency = userSettings[userId]?.currency || 'CNY';
-        if (!accounts[userId]) accounts[userId] = [];
-        const transactionTime = getUserTime(userId);
-        accounts[userId].push({ type: '出款', amount, currency, time: transactionTime });
+        const accountId = getAccountId(ctx);
+        const currency = userSettings[accountId]?.currency || 'CNY';
+        if (!accounts[accountId]) accounts[accountId] = [];
+        const transactionTime = getUserTime(accountId);
+        accounts[accountId].push({ type: '出款', amount, currency, time: transactionTime });
 
-        ctx.reply(`已记录出款：${amount} ${currency} 时间：${transactionTime}`);
+        const transactions = accounts[accountId].filter(e => e.type === '出款').slice(-5);
+        const details = transactions.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
+        const totalInUSDT = (transactions.reduce((sum, entry) => sum + entry.amount, 0) / exchangeRate).toFixed(2);
+
+        ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n出款${transactions.length}笔：\n${details}\nUSDT：${totalInUSDT}`);
     });
 
     // 查看账单
@@ -84,11 +93,11 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!isOperator(ctx.from.id)) {
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
-        const userId = ctx.from.id;
-        if (!accounts[userId] || accounts[userId].length === 0) {
+        const accountId = getAccountId(ctx);
+        if (!accounts[accountId] || accounts[accountId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
-        const transactions = accounts[userId];
+        const transactions = accounts[accountId];
         const deposits = transactions.filter(e => e.type === '入款');
         const withdrawals = transactions.filter(e => e.type === '出款');
         const depositDetails = deposits.map((entry) => `${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
@@ -97,6 +106,15 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         const netInUSDT = ((totalDeposit - totalWithdrawal) / exchangeRate).toFixed(2);
 
         ctx.reply(`账单日期:${moment().format('YYYY/MM/DD')}\n入款${deposits.length}笔：\n${depositDetails}\n---------------------------\n总入款：${totalDeposit} CNY\n总出款：${totalWithdrawal} CNY\nUSDT：${netInUSDT}`);
+    });
+
+    // 设置 USDT 汇率
+    bot.hears(/^设置USDT汇率\s+(\d+(\.\d+)?)/, (ctx) => {
+        if (!isOperator(ctx.from.id)) {
+            return ctx.reply('您无权使用此机器人。请联系管理员。');
+        }
+        exchangeRate = parseFloat(ctx.match[1]);
+        ctx.reply(`USDT 汇率已设置为：${exchangeRate}`);
     });
 
     // 添加操作员
@@ -142,27 +160,28 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!isOperator(ctx.from.id)) {
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
-        const userId = ctx.from.id;
+        const accountId = getAccountId(ctx);
         const timeToDelete = ctx.match[1];
-        if (!accounts[userId]) {
+        if (!accounts[accountId]) {
             return ctx.reply('没有找到相关记录。');
         }
-        const initialLength = accounts[userId].length;
-        accounts[userId] = accounts[userId].filter(entry => !entry.time.includes(timeToDelete));
-        if (accounts[userId].length < initialLength) {
+        const initialLength = accounts[accountId].length;
+        accounts[accountId] = accounts[accountId].filter(entry => !entry.time.includes(timeToDelete));
+        if (accounts[accountId].length < initialLength) {
             ctx.reply(`已删除 ${timeToDelete} 的账单记录。`);
         } else {
             ctx.reply('未找到对应时间的记录。');
         }
     });
 
-    // 设置 USDT 汇率
-    bot.hears(/^设置USDT汇率：(\d+(\.\d+)?)/, (ctx) => {
-        if (!isOperator(ctx.from.id)) {
-            return ctx.reply('您无权使用此机器人。请联系管理员。');
+    // 数学计算
+    bot.hears(/^[0-9+\-*/().\s]+$/, (ctx) => {
+        try {
+            const result = eval(ctx.message.text);
+            ctx.reply(`计算结果：${result}`);
+        } catch {
+            ctx.reply('无效的数学表达式。');
         }
-        exchangeRate = parseFloat(ctx.match[1]);
-        ctx.reply(`USDT 汇率已设置为：${exchangeRate}`);
     });
 
     // 切换币种
@@ -175,9 +194,9 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!supportedCurrencies.includes(currency)) {
             return ctx.reply('不支持的币种。支持的币种有：CNY, USD, EUR, JPY');
         }
-        const userId = ctx.from.id;
-        if (!userSettings[userId]) userSettings[userId] = {};
-        userSettings[userId].currency = currency;
+        const accountId = getAccountId(ctx);
+        if (!userSettings[accountId]) userSettings[accountId] = {};
+        userSettings[accountId].currency = currency;
         ctx.reply(`币种已切换为：${currency}`);
     });
 
@@ -190,9 +209,9 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         if (!moment.tz.zone(timezone)) {
             return ctx.reply('无效的时区名称。支持的时区包括：UTC, Asia/Shanghai, Europe/London 等。');
         }
-        const userId = ctx.from.id;
-        if (!userSettings[userId]) userSettings[userId] = {};
-        userSettings[userId].timezone = timezone;
+        const accountId = getAccountId(ctx);
+        if (!userSettings[accountId]) userSettings[accountId] = {};
+        userSettings[accountId].timezone = timezone;
         ctx.reply(`时区已设置为：${timezone}`);
     });
 
