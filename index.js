@@ -103,6 +103,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
             return ctx.reply('您无权使用此机器人。请联系管理员。');
         }
         const accountId = getAccountId(ctx);
+        console.log(`获取账单: 账户ID ${accountId}`);
         if (!accounts[accountId] || accounts[accountId].length === 0) {
             return ctx.reply('当前没有账单记录。');
         }
