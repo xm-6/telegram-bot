@@ -14,7 +14,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // 全局数据结构
 const accounts = {}; // 用户或群组账单
 const userSettings = {}; // 包括时区、货币和权限信息
-let operators = [process.env.OWNER_ID]; // 默认仅 OWNER_ID 是操作员
+let authorizedUsers = [process.env.OWNER_ID]; // 默认仅 OWNER_ID 可以使用所有功能
 let exchangeRate = 7.1; // 默认 USDT 汇率
 
 (async () => {
@@ -37,12 +37,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 
         // 检查权限
         const hasPermission = (ctx) => {
-            const accountId = getAccountId(ctx);
-            return operators.includes(ctx.from.id.toString()) || userSettings[accountId]?.isAuthorized;
-        };
-
-        const isOperator = (ctx) => {
-            return operators.includes(ctx.from.id.toString());
+            return authorizedUsers.includes(ctx.from.id.toString());
         };
 
         // 初始化命令
@@ -64,10 +59,8 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
 6. 切换币种 <币种> -- 切换货币单位（支持：CNY, USD, EUR, JPY）
 7. 设置时区 <时区> -- 设置时区（支持：UTC, Asia/Shanghai, Europe/London, etc.）
 8. 授权用户 -- 回复消息或指定用户ID授权使用机器人
-9. 添加操作员 -- 添加管理员权限
-10. 删除操作员 -- 删除管理员权限
-11. 数学计算 -- 输入数学表达式直接计算结果
-12. 清除账单 -- 清除所有账单记录`);
+9. 数学计算 -- 输入数学表达式直接计算结果
+10. 清除账单 -- 清除所有账单记录`);
         });
 
         // 记录入款
@@ -132,7 +125,7 @@ USDT：${netInUSDT}`);
 
         // 删除记录
         bot.hears(/^删除\s+([0-9:]+)/, (ctx) => {
-            if (!isOperator(ctx)) {
+            if (!hasPermission(ctx)) {
                 return ctx.reply('您无权使用此功能。请联系管理员。');
             }
             const accountId = getAccountId(ctx);
@@ -151,7 +144,7 @@ USDT：${netInUSDT}`);
 
         // 清除所有账单
         bot.command('清除账单', (ctx) => {
-            if (!isOperator(ctx)) {
+            if (!hasPermission(ctx)) {
                 return ctx.reply('您无权使用此功能。请联系管理员。');
             }
             const accountId = getAccountId(ctx);
@@ -164,7 +157,7 @@ USDT：${netInUSDT}`);
 
         // 设置 USDT 汇率
         bot.hears(/^设置USDT汇率\s+(\d+(\.\d+)?)/, (ctx) => {
-            if (!isOperator(ctx)) {
+            if (!hasPermission(ctx)) {
                 return ctx.reply('您无权使用此功能。请联系管理员。');
             }
             exchangeRate = parseFloat(ctx.match[1]);
@@ -189,7 +182,7 @@ USDT：${netInUSDT}`);
 
         // 设置时区
         bot.hears(/^设置时区 (.+)/, (ctx) => {
-            if (!isOperator(ctx)) {
+            if (!hasPermission(ctx)) {
                 return ctx.reply('您无权使用此功能。请联系管理员。');
             }
             const timezone = ctx.match[1];
@@ -204,61 +197,17 @@ USDT：${netInUSDT}`);
 
         // 授权用户
         bot.command('授权用户', (ctx) => {
-            if (!isOperator(ctx)) {
+            if (!hasPermission(ctx)) {
                 return ctx.reply('您无权执行此操作。');
             }
             const targetId = ctx.message.reply_to_message?.from.id.toString() || ctx.message.text.split(' ')[1];
             if (!targetId) {
                 return ctx.reply('请回复目标用户的消息或提供用户ID以授权。');
             }
-            const accountId = getAccountId(ctx);
-            if (!userSettings[accountId]) userSettings[accountId] = {};
-            userSettings[accountId].isAuthorized = true;
+            if (!authorizedUsers.includes(targetId)) {
+                authorizedUsers.push(targetId);
+            }
             ctx.reply(`用户 ${targetId} 已被授权使用机器人功能。`);
-        });
-
-        // 添加操作员
-        bot.command('添加操作员', (ctx) => {
-            if (!isOperator(ctx)) {
-                return ctx.reply('您无权执行此操作。');
-            }
-            if (ctx.message.reply_to_message) {
-                const newOperator = ctx.message.reply_to_message.from.id.toString();
-                if (!operators.includes(newOperator)) {
-                    operators.push(newOperator);
-                    ctx.reply('已添加操作员。');
-                } else {
-                    ctx.reply('该用户已是操作员。');
-                }
-            } else {
-                const username = ctx.message.text.split(' ')[1];
-                if (username && username.startsWith('@')) {
-                    operators.push(username);
-                    ctx.reply(`已添加操作员：${username}`);
-                } else {
-                    ctx.reply('请回复消息或使用 @用户名 格式指定用户以添加操作员。');
-                }
-            }
-        });
-
-        // 删除操作员
-        bot.command('删除操作员', (ctx) => {
-            if (!isOperator(ctx)) {
-                return ctx.reply('您无权执行此操作。');
-            }
-            if (ctx.message.reply_to_message) {
-                const operator = ctx.message.reply_to_message.from.id.toString();
-                operators = operators.filter(op => op !== operator);
-                ctx.reply('已删除操作员。');
-            } else {
-                const username = ctx.message.text.split(' ')[1];
-                if (username && username.startsWith('@')) {
-                    operators = operators.filter(op => op !== username);
-                    ctx.reply(`已删除操作员：${username}`);
-                } else {
-                    ctx.reply('请回复消息或使用 @用户名 格式指定用户以删除操作员。');
-                }
-            }
         });
 
         // 数学计算
