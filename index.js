@@ -1,4 +1,3 @@
-// 引入依赖
 const { Telegraf } = require('telegraf');
 const { MongoClient } = require('mongodb');
 const moment = require('moment-timezone');
@@ -6,7 +5,6 @@ require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// 数据存储
 const accounts = {}; // 每个用户或群组的账单记录
 const userSettings = {}; // 包括时区、货币和权限信息
 let operators = [process.env.OWNER_ID]; // 默认仅 OWNER_ID 是操作员
@@ -31,20 +29,18 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
     // 检查是否有权限（支持管理员和动态添加的用户）
     const hasPermission = (ctx) => {
         const accountId = getAccountId(ctx);
-        return operators.includes(ctx.from.id.toString()) || operators.includes(accountId) || userSettings[accountId]?.isAuthorized;
+        return operators.includes(ctx.from.id.toString()) || userSettings[accountId]?.isAuthorized;
     };
 
     // 检查是否为操作员
     const isOperator = (ctx) => {
-        const accountId = getAccountId(ctx);
-        return operators.includes(ctx.from.id.toString()) || operators.includes(accountId);
+        return operators.includes(ctx.from.id.toString());
     };
 
     // 初始化命令
     bot.start((ctx) => {
         const accountId = getAccountId(ctx);
-        if (!userSettings[accountId]) userSettings[accountId] = {};
-        userSettings[accountId].isAuthorized = true; // 默认授权普通用户
+        if (!userSettings[accountId]) userSettings[accountId] = { isAuthorized: true };
         ctx.reply('欢迎使用记账机器人！输入 /help 查看所有指令。如果需要更高权限，请联系管理员。');
     });
 
@@ -76,9 +72,7 @@ let exchangeRate = 7.1; // 默认 USDT 汇率
         accounts[accountId].push({ type: '入款', amount, currency, time: transactionTime });
 
         const transactions = accounts[accountId].slice(-5);
-        const details = transactions
-            .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
-            .join('\n');
+        const details = transactions.map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
         const netTotal = totalDeposit - totalWithdrawal;
@@ -108,9 +102,7 @@ USDT：${netInUSDT}`);
         accounts[accountId].push({ type: '出款', amount, currency, time: transactionTime });
 
         const transactions = accounts[accountId].slice(-5);
-        const details = transactions
-            .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
-            .join('\n');
+        const details = transactions.map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = accounts[accountId].filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = accounts[accountId].filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
         const netTotal = totalDeposit - totalWithdrawal;
@@ -138,9 +130,7 @@ USDT：${netInUSDT}`);
         }
 
         const transactions = accounts[accountId];
-        const details = transactions
-            .map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`)
-            .join('\n');
+        const details = transactions.map((entry) => `${entry.type === '入款' ? '' : '-'}${entry.amount} ${entry.currency}  [${entry.time.split(' ')[1]}]`).join('\n');
         const totalDeposit = transactions.filter(e => e.type === '入款').reduce((sum, entry) => sum + entry.amount, 0);
         const totalWithdrawal = transactions.filter(e => e.type === '出款').reduce((sum, entry) => sum + entry.amount, 0);
         const netTotal = totalDeposit - totalWithdrawal;
